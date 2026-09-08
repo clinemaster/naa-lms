@@ -33,7 +33,7 @@ function DashboardContent() {
     <>
       <Navbar />
       <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:px-6 lg:px-8">
-        <h1 className="mb-1 text-3xl font-semibold">Welcome back, {user?.full_name}</h1>
+        <h1 className="mb-1 text-3xl font-semibold">Welcome, {user?.full_name}</h1>
         <p className="mb-8 text-muted-foreground">Here&apos;s where you left off.</p>
 
         {summary && (
