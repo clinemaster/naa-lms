@@ -47,18 +47,26 @@ except ModuleNotFoundError:
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-br63qge)_$-s#c)9=3cw%&$w01&ricbc1#n8po%-*rdpc((pg9'
-
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
 
 def _env_list(key, default=""):
     raw = env(key, default=default)
     if not raw:
         return []
     return [item.strip() for item in str(raw).split(",") if item.strip()]
+
+
+def _env_bool(key, default=False):
+    raw = env(key, default=None)
+    if raw is None:
+        return default
+    return str(raw).strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+# SECURITY WARNING: keep the secret key used in production secret!
+SECRET_KEY = env('SECRET_KEY', default='django-insecure-br63qge)_$-s#c)9=3cw%&$w01&ricbc1#n8po%-*rdpc((pg9')
+
+# SECURITY WARNING: don't run with debug turned on in production!
+DEBUG = _env_bool('DEBUG', default=True)
 
 
 ALLOWED_HOSTS = _env_list("ALLOWED_HOSTS", default="localhost,127.0.0.1,[::1]")
@@ -123,12 +131,18 @@ WSGI_APPLICATION = 'backend.wsgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
+#
+# Defaults to SQLite (matching local dev with no .env) -- set DATABASE_URL
+# (e.g. postgres://user:password@localhost:5432/naa_lms) to use Postgres
+# instead, which docker-compose.yml does.
+
+import dj_database_url
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+        conn_max_age=600,
+    )
 }
 
 

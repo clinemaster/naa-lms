@@ -84,7 +84,7 @@ class IDORProtectionTests(APITestCase):
 
 def build_course_with_lessons(teacher_user, lesson_count=3):
     teacher = api_models.Teacher.objects.create(user=teacher_user, full_name=teacher_user.full_name)
-    category = api_models.Category.objects.create(title='Financial Audit')
+    category, _ = api_models.Category.objects.get_or_create(title='Financial Audit')
     course = api_models.Course.objects.create(
         teacher=teacher,
         category=category,

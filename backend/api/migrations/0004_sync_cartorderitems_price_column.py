@@ -2,6 +2,12 @@ from django.db import migrations
 
 
 def add_price_column_if_missing(apps, schema_editor):
+    # SQLite-only repair for pre-existing dev databases; api_cartorderitems
+    # is dropped entirely by migration 0012 anyway, so a fresh database
+    # (SQLite or otherwise) never needs this.
+    if schema_editor.connection.vendor != 'sqlite':
+        return
+
     cursor = schema_editor.connection.cursor()
     cursor.execute("PRAGMA table_info(api_cartorderitems)")
     columns = [row[1] for row in cursor.fetchall()]
