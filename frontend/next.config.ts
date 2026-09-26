@@ -2,6 +2,11 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // Pin the Turbopack root to this app so a stray package-lock.json in a
+  // parent directory (e.g. the user's home folder) isn't picked up.
+  turbopack: {
+    root: __dirname,
+  },
   images: {
     remotePatterns: [
       { protocol: "http", hostname: "127.0.0.1", port: "8000", pathname: "/media/**" },

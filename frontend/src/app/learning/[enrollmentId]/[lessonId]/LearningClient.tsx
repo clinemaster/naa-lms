@@ -53,9 +53,12 @@ function LearningContent({ enrollmentId, lessonId }: { enrollmentId: string; les
       queryClient.invalidateQueries({ queryKey: ["enrollment", user?.id, enrollmentId] });
     }
     if (result.course_completed_now) {
-      toast.success("Congratulations! You've completed the course. Your certificate is ready.", {
-        duration: 8000,
-      });
+      toast.success(
+        result.certificate_issued
+          ? "Congratulations! You've completed the course. Your certificate is ready."
+          : "Congratulations! You've completed the course.",
+        { duration: 8000 }
+      );
       queryClient.invalidateQueries({ queryKey: ["my-courses"] });
     }
   };
@@ -154,7 +157,7 @@ function LearningContent({ enrollmentId, lessonId }: { enrollmentId: string; les
 
 export function LearningClient({ enrollmentId, lessonId }: { enrollmentId: string; lessonId: string }) {
   return (
-    <RequireRole roles={["Student", "Teacher", "Admin"]}>
+    <RequireRole roles={["Student", "Teacher", "Admin", "Academy Admin"]}>
       <LearningContent enrollmentId={enrollmentId} lessonId={lessonId} />
     </RequireRole>
   );

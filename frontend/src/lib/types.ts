@@ -1,4 +1,12 @@
-export type Role = "Student" | "Teacher" | "Admin";
+export type Role = "Student" | "Teacher" | "Admin" | "Academy Admin";
+
+// The stored/API value of the "Admin" role is unchanged; it is shown to people as "SysAdmin".
+export const ROLE_LABELS: Record<Role, string> = {
+  Student: "Student",
+  Teacher: "Teacher",
+  Admin: "SysAdmin",
+  "Academy Admin": "Academy Admin",
+};
 
 export interface AuthUser {
   id: number;
@@ -75,6 +83,7 @@ export interface Course {
   platform_status: PlatformStatus;
   teacher_course_status: string;
   featured: boolean;
+  certificate_enabled: boolean;
   date: string;
   submitted_at: string | null;
   reviewed_at: string | null;
@@ -104,8 +113,18 @@ export interface EnrolledCourse {
   completed_at: string | null;
   progress_percentage: number;
   is_course_completed: boolean;
+  // The student's certificate for this course, once issued; null otherwise.
+  certificate: EnrollmentCertificate | null;
   completed_lesson: LessonProgress[];
   curriculum: Variant[];
+}
+
+export interface EnrollmentCertificate {
+  id: number;
+  certificate_id: string;
+  certificate_number: string;
+  pdf: string | null;
+  date: string;
 }
 
 export interface Certificate {
@@ -127,6 +146,8 @@ export interface ProgressHeartbeatResponse {
   course_progress_percentage: number;
   course_completed: boolean;
   course_completed_now: boolean;
+  certificate_enabled: boolean;
+  certificate_issued: boolean;
 }
 
 export interface LessonAccessResponse {
@@ -150,6 +171,7 @@ export interface AdminSummary {
   total_users: number;
   students: number;
   teachers: number;
+  academy_admins: number;
   courses: number;
   published_courses: number;
   pending_review: number;

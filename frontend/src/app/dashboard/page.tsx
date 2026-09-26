@@ -92,7 +92,7 @@ function DashboardContent() {
 
 export default function DashboardPage() {
   return (
-    <RequireRole roles={["Student", "Teacher", "Admin"]}>
+    <RequireRole roles={["Student", "Teacher", "Admin", "Academy Admin"]}>
       <DashboardContent />
     </RequireRole>
   );

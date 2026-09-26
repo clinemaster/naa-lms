@@ -29,7 +29,18 @@ schema_view = get_schema_view(
    openapi.Info(
       title="NA Backend APIs",
       default_version='v1',
-      description="This is the API documentation for NA LMS APIs",
+      description=(
+          "API documentation for NA LMS APIs.\n\n"
+          "**Authentication.** Get a token from `POST /api/v1/user/token/`, then click *Authorize* and enter "
+          "`Bearer <access token>`.\n\n"
+          "**Roles.** Student, Teacher, SysAdmin and Academy Admin. The API and the token carry the SysAdmin role as "
+          "the value `Admin`; it is displayed as *SysAdmin* in the app.\n\n"
+          "**Who can do what (admin area).**\n"
+          "- SysAdmin: manage users and roles, view the dashboard summary, enrollments and site settings, and view courses.\n"
+          "- Academy Admin: approve, reject, publish and unpublish courses, and set certificate issuance per course.\n\n"
+          "**Certificates.** Course completion and certificate eligibility are separate. A course issues certificates only "
+          "when `certificate_enabled` is true (default false), and a student gets at most one certificate per course."
+      ),
       terms_of_service="https://www.google.com/policies/terms/",
       contact=openapi.Contact(email="na@outlook.com"),
       license=openapi.License(name="BSD License"),

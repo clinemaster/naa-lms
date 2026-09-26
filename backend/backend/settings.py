@@ -66,7 +66,7 @@ def _env_bool(key, default=False):
 SECRET_KEY = env('SECRET_KEY', default='django-insecure-br63qge)_$-s#c)9=3cw%&$w01&ricbc1#n8po%-*rdpc((pg9')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = _env_bool('DEBUG', default=True)
+DEBUG = _env_bool('DEBUG', default=False)
 
 
 ALLOWED_HOSTS = _env_list("ALLOWED_HOSTS", default="localhost,127.0.0.1,[::1]")
@@ -213,7 +213,7 @@ EMAIL_BACKEND = 'anymail.backends.mailgun.EmailBackend'  # Use Mailgun backend
 EMAIL_HOST = 'smtp.mailgun.org'
 
 
-FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:5173')  # Default frontend URL for development
+FRONTEND_URL = env('FRONTEND_URL', default='http://localhost:3000')  # Next.js dev server
 
 
 ANYMAIL = {
@@ -239,7 +239,7 @@ JAZZMIN_SETTINGS = {
     "copyright": "NA Library",
 
     # Whether to show the UI customizer on the sidebar
-    "show_ui_builder": True,
+    "show_ui_builder": False,
 }
 
 JAZZMIN_UI_TWEAKS = {
@@ -279,6 +279,18 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
         'rest_framework.authentication.SessionAuthentication',
     ),
+}
+
+# Swagger UI (drf-yasg): the API authenticates with a JWT bearer token.
+SWAGGER_SETTINGS = {
+    'SECURITY_DEFINITIONS': {
+        'Bearer': {
+            'type': 'apiKey',
+            'name': 'Authorization',
+            'in': 'header',
+            'description': 'Enter: Bearer <access token>',
+        },
+    },
 }
 
 # JWT Configuration

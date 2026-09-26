@@ -45,6 +45,8 @@ function LoginForm() {
         router.push(next);
       } else if (user.role === "Admin") {
         router.push("/admin");
+      } else if (user.role === "Academy Admin") {
+        router.push("/admin/courses");
       } else if (user.role === "Teacher") {
         router.push("/teacher");
       } else {

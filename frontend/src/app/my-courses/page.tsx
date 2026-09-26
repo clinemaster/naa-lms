@@ -52,7 +52,7 @@ function MyCoursesContent() {
 
 export default function MyCoursesPage() {
   return (
-    <RequireRole roles={["Student", "Teacher", "Admin"]}>
+    <RequireRole roles={["Student", "Teacher", "Admin", "Academy Admin"]}>
       <MyCoursesContent />
     </RequireRole>
   );

@@ -3,7 +3,10 @@ from userauths.models import User, UserProfile
 from shortuuid.django_fields import ShortUUIDField 
 from django.utils.text import slugify
 from django.utils import timezone
-from moviepy.editor import VideoFileClip
+try:
+    from moviepy import VideoFileClip  # moviepy 2.x
+except ImportError:
+    from moviepy.editor import VideoFileClip  # moviepy 1.x
 import math
 
 LANGUAGE_CHOICES = (
@@ -109,6 +112,10 @@ class Course(models.Model):
     platform_status = models.CharField(max_length=20, choices=PLATFORM_STATUS, default="Published")
     teacher_course_status = models.CharField(max_length=20, choices=TEACHER_STATUS, default="Published")
     featured = models.BooleanField(default=False)
+    # Whether completing this course earns a certificate. Independent of
+    # completion itself: every course can be completed and re-watched either
+    # way. Only Administrators may change it.
+    certificate_enabled = models.BooleanField(default=False)
     course_id = ShortUUIDField(length=6, max_length=20, unique=True, alphabet="1234567890")
     date = models.DateTimeField(default=timezone.now)
 
@@ -348,6 +355,11 @@ class Certificate(models.Model):
 
     class Meta:
         ordering = ['-date']
+        constraints = [
+            # One certificate per student per course, enforced by the database
+            # so concurrent completion requests cannot both insert one.
+            models.UniqueConstraint(fields=['user', 'course'], name='unique_certificate_per_user_course'),
+        ]
 
     def __str__(self):
         return self.course.title

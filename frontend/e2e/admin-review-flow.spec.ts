@@ -1,22 +1,23 @@
 import { test, expect } from "@playwright/test";
 
 /**
- * Admin reviews and approves a pending course, then it becomes visible in
- * the public catalog. Assumes teacher-course-flow.spec.ts (or an equivalent
- * run) has already produced at least one course sitting in "Review" status,
- * and that e2e_admin@example.com / Str0ngPass!123 exists with role Admin.
+ * An Academy Admin reviews and approves a pending course, then it becomes
+ * visible in the public catalog. Assumes teacher-course-flow.spec.ts (or an
+ * equivalent run) has already produced at least one course sitting in "Review"
+ * status, and that e2e_academy_admin@example.com / Str0ngPass!123 exists with
+ * role "Academy Admin". (SysAdmins cannot approve courses.)
  */
-test("admin can review and approve a pending course", async ({ page }) => {
-  await test.step("login as admin", async () => {
+test("academy admin can review and approve a pending course", async ({ page }) => {
+  await test.step("login as academy admin", async () => {
     await page.goto("/login");
-    await page.fill("#email", "e2e_admin@example.com");
+    await page.fill("#email", "e2e_academy_admin@example.com");
     await page.fill("#password", "Str0ngPass!123");
     await page.click('button[type="submit"]');
-    await page.waitForURL("**/admin");
+    await page.waitForURL("**/admin/courses");
   });
 
-  await test.step("dashboard shows a pending review course", async () => {
-    await expect(page.getByRole("heading", { name: "Pending Review" })).toBeVisible();
+  await test.step("filter to courses pending review", async () => {
+    await page.goto("/admin/courses?status=Review");
   });
 
   await test.step("open the first pending course and approve it", async () => {

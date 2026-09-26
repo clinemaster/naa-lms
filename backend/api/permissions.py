@@ -9,6 +9,22 @@ class IsAdminRole(BasePermission):
         return bool(user and user.is_authenticated and user.is_admin_role)
 
 
+class IsCourseReviewerRole(BasePermission):
+    """System Admin or Academy Admin: review, publish and certificate-setting endpoints."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(user and user.is_authenticated and user.can_review_courses)
+
+
+class IsAcademyAdminRole(BasePermission):
+    """Academy Admin only. Deliberately excludes SysAdmins (and superusers, who are always SysAdmins)."""
+
+    def has_permission(self, request, view):
+        user = request.user
+        return bool(user and user.is_authenticated and user.is_academy_admin_role)
+
+
 class IsTeacherRole(BasePermission):
     """Teacher or Admin."""
 

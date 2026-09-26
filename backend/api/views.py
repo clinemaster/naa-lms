@@ -5,15 +5,18 @@ import os
 from django.db.models.functions import ExtractMonth
 from django.shortcuts import render, redirect
 from django.utils import timezone
+from django.db import IntegrityError, transaction
 from django.db.models import Sum, Count
 from django.core.files.uploadedfile import InMemoryUploadedFile
 import rest_framework
+from drf_yasg import openapi
+from drf_yasg.utils import no_body, swagger_auto_schema
 from rest_framework.decorators import api_view
 from rest_framework import generics, status, viewsets
 from rest_framework.views import APIView
 from rest_framework_simplejwt.views import TokenObtainPairView
 from api import serializer as api_serializer
-from userauths.models import User, UserProfile, ROLE_STUDENT, ROLE_TEACHER, ROLE_ADMIN
+from userauths.models import User, UserProfile, ROLE_STUDENT, ROLE_TEACHER, ROLE_ADMIN, ROLE_ACADEMY_ADMIN
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.exceptions import NotFound, ValidationError, PermissionDenied
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -31,6 +34,24 @@ import random
 import logging
 
 logger = logging.getLogger(__name__)
+
+
+# --- API documentation (drf-yasg) helpers ---------------------------------
+def _obj(**props):
+    return openapi.Schema(type=openapi.TYPE_OBJECT, properties=props)
+
+
+_STR = openapi.Schema(type=openapi.TYPE_STRING)
+_BOOL = openapi.Schema(type=openapi.TYPE_BOOLEAN)
+_INT = openapi.Schema(type=openapi.TYPE_INTEGER)
+_NUM = openapi.Schema(type=openapi.TYPE_NUMBER)
+
+_COURSE_NOT_FOUND = openapi.Response("Course with this id does not exist.", _obj(detail=_STR))
+_ACADEMY_ADMIN_ONLY = openapi.Response("Caller is not an Academy Admin.", _obj(detail=_STR))
+
+
+def _course_action_response(description, **extra):
+    return openapi.Response(description, _obj(message=_STR, platform_status=_STR, **extra))
 
 
 def parse_bool(value):
@@ -68,16 +89,27 @@ def extract_numeric_id(value):
     return None
 
 def issue_certificate(enrollment):
-    """Generate (or return the existing) certificate for a completed enrollment.
+    """Return the student's certificate for a completed enrollment, creating it if needed.
 
     Only ever called after EnrolledCourse.is_course_completed() has been
     verified server-side -- the frontend has no way to trigger this directly.
+    Returns None when the course does not issue certificates. Safe to call
+    any number of times, including concurrently: at most one certificate per
+    (student, course) ever exists, backed by a database unique constraint.
     """
+    if not enrollment.course.certificate_enabled or enrollment.user_id is None:
+        return None
+
     existing = api_models.Certificate.objects.filter(course=enrollment.course, user=enrollment.user).first()
     if existing:
         return existing
 
-    certificate = api_models.Certificate.objects.create(course=enrollment.course, user=enrollment.user)
+    try:
+        with transaction.atomic():
+            certificate = api_models.Certificate.objects.create(course=enrollment.course, user=enrollment.user)
+    except IntegrityError:
+        # A concurrent request created it between our check and our insert.
+        return api_models.Certificate.objects.filter(course=enrollment.course, user=enrollment.user).first()
 
     try:
         _render_certificate_pdf(certificate, enrollment)
@@ -489,6 +521,32 @@ class LessonProgressAPIView(generics.GenericAPIView):
             "completed": progress.completed if progress else False,
         })
 
+    @swagger_auto_schema(
+        operation_summary="Report watch progress for a lesson",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            properties={
+                'position': openapi.Schema(type=openapi.TYPE_NUMBER, description="Current playback position, in seconds."),
+                'duration': openapi.Schema(type=openapi.TYPE_NUMBER, description="Lesson length in seconds (server value wins if known)."),
+            },
+        ),
+        responses={
+            200: openapi.Response(
+                "Progress recorded. When the last required lesson completes the course, the enrollment is marked "
+                "completed and, if the course issues certificates, exactly one certificate is created for the "
+                "student (repeat calls and re-watching never create another).",
+                _obj(
+                    current_position=_NUM, max_watched_position=_NUM, completion_percentage=_NUM, completed=_BOOL,
+                    lesson_newly_completed=_BOOL, course_progress_percentage=_INT, course_completed=_BOOL,
+                    course_completed_now=_BOOL,
+                    certificate_enabled=openapi.Schema(type=openapi.TYPE_BOOLEAN, description="Whether this course issues certificates."),
+                    certificate_issued=openapi.Schema(type=openapi.TYPE_BOOLEAN, description="Whether the student holds a certificate for this course."),
+                ),
+            ),
+            400: openapi.Response("position and duration must be numeric.", _obj(message=_STR)),
+            403: openapi.Response("Not enrolled in the course, or the previous lesson is not completed yet.", _obj(detail=_STR)),
+        },
+    )
     def post(self, request, variant_item_id, *args, **kwargs):
         variant_item, course, enrollment = self._get_lesson_and_enrollment(request, variant_item_id)
 
@@ -540,15 +598,25 @@ class LessonProgressAPIView(generics.GenericAPIView):
 
         course_completed_now = False
         if newly_completed and enrollment.is_course_completed() and not enrollment.completed_at:
-            enrollment.completed_at = timezone.now()
-            enrollment.save(update_fields=['completed_at'])
-            course_completed_now = True
-            issue_certificate(enrollment)
-            api_models.Notification.objects.create(
-                teacher=course.teacher,
-                course=course,
-                type="Course Enrollement Completed",
-            )
+            # Conditional UPDATE so that of several simultaneous completing
+            # requests exactly one marks the course complete and notifies.
+            completed_at = timezone.now()
+            if api_models.EnrolledCourse.objects.filter(pk=enrollment.pk, completed_at__isnull=True).update(completed_at=completed_at):
+                enrollment.completed_at = completed_at
+                course_completed_now = True
+                api_models.Notification.objects.create(
+                    teacher=course.teacher,
+                    course=course,
+                    type="Course Enrollement Completed",
+                )
+            else:
+                enrollment.refresh_from_db(fields=['completed_at'])
+
+        # Completion and certificate eligibility are separate: a completed
+        # enrollment in a certificate-enabled course always ends up with
+        # exactly one certificate, including when an administrator enabled
+        # certificates after the student finished. Re-watching is a no-op.
+        certificate = issue_certificate(enrollment) if enrollment.completed_at else None
 
         return Response({
             "current_position": progress.current_position,
@@ -559,6 +627,8 @@ class LessonProgressAPIView(generics.GenericAPIView):
             "course_progress_percentage": enrollment.progress_percentage(),
             "course_completed": enrollment.is_course_completed(),
             "course_completed_now": course_completed_now,
+            "certificate_enabled": course.certificate_enabled,
+            "certificate_issued": certificate is not None,
         })
 
 class StudentNoteCreateAPIView(generics.ListCreateAPIView):
@@ -1823,7 +1893,7 @@ class CourseSubmitForReviewAPIView(generics.GenericAPIView):
 
 class AdminCourseListAPIView(generics.ListAPIView):
     serializer_class = api_serializer.CourseSerializer
-    permission_classes = [api_permissions.IsAdminRole]
+    permission_classes = [api_permissions.IsCourseReviewerRole]
 
     def get_queryset(self):
         queryset = api_models.Course.objects.all().select_related('teacher', 'category')
@@ -1835,14 +1905,63 @@ class AdminCourseListAPIView(generics.ListAPIView):
 
 class AdminCourseDetailAPIView(generics.RetrieveAPIView):
     serializer_class = api_serializer.CourseSerializer
-    permission_classes = [api_permissions.IsAdminRole]
+    permission_classes = [api_permissions.IsCourseReviewerRole]
     queryset = api_models.Course.objects.all()
     lookup_url_kwarg = 'course_id'
 
 
-class AdminCourseApproveAPIView(generics.GenericAPIView):
-    permission_classes = [api_permissions.IsAdminRole]
+class AdminCourseCertificateSettingAPIView(generics.GenericAPIView):
+    """Turn certificate issuance on or off for a course (Academy Admins only).
 
+    SysAdmins can see the setting on the course but cannot change it.
+    Turning it off never revokes certificates that were already issued.
+    """
+    permission_classes = [api_permissions.IsAcademyAdminRole]
+
+    @swagger_auto_schema(
+        operation_summary="Turn certificate issuance on or off for a course (Academy Admin only)",
+        operation_description=(
+            "Controls the 'Issue Certificate Upon Completion' setting. Defaults to false for every course. "
+            "Completing a course always works; a certificate is issued only when this is true, at most once per "
+            "student per course. Turning it off never removes certificates already issued. SysAdmins cannot change it."
+        ),
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['certificate_enabled'],
+            properties={'certificate_enabled': openapi.Schema(type=openapi.TYPE_BOOLEAN, description="Must be a JSON boolean.")},
+        ),
+        responses={
+            200: openapi.Response("Setting updated.", _obj(message=_STR, certificate_enabled=_BOOL)),
+            400: openapi.Response("certificate_enabled must be true or false.", _obj(message=_STR)),
+            403: _ACADEMY_ADMIN_ONLY,
+            404: _COURSE_NOT_FOUND,
+        },
+    )
+    def patch(self, request, course_id, *args, **kwargs):
+        course = api_models.Course.objects.filter(id=course_id).first()
+        if not course:
+            raise NotFound("Course with this id does not exist.")
+
+        enabled = request.data.get('certificate_enabled')
+        if not isinstance(enabled, bool):
+            return Response({"message": "certificate_enabled must be true or false."}, status=status.HTTP_400_BAD_REQUEST)
+
+        course.certificate_enabled = enabled
+        course.save(update_fields=['certificate_enabled'])
+
+        return Response({"message": "Certificate setting updated.", "certificate_enabled": course.certificate_enabled})
+
+
+class AdminCourseApproveAPIView(generics.GenericAPIView):
+    """Approve a submitted course, which publishes it. Academy Admins only."""
+    permission_classes = [api_permissions.IsAcademyAdminRole]
+
+    @swagger_auto_schema(
+        operation_summary="Approve a submitted course (Academy Admin only)",
+        operation_description="Moves a course from Review to Published. SysAdmins cannot approve.",
+        request_body=no_body,
+        responses={200: _course_action_response("Course approved and published."), 403: _ACADEMY_ADMIN_ONLY, 404: _COURSE_NOT_FOUND},
+    )
     def post(self, request, course_id, *args, **kwargs):
         course = api_models.Course.objects.filter(id=course_id).first()
         if not course:
@@ -1863,8 +1982,24 @@ class AdminCourseApproveAPIView(generics.GenericAPIView):
 
 
 class AdminCourseRejectAPIView(generics.GenericAPIView):
-    permission_classes = [api_permissions.IsAdminRole]
+    """Reject a submitted course with a reason. Academy Admins only."""
+    permission_classes = [api_permissions.IsAcademyAdminRole]
 
+    @swagger_auto_schema(
+        operation_summary="Reject a submitted course (Academy Admin only)",
+        operation_description="Sends the course back to the teacher as Rejected, with a reason. SysAdmins cannot reject.",
+        request_body=openapi.Schema(
+            type=openapi.TYPE_OBJECT,
+            required=['reason'],
+            properties={'reason': openapi.Schema(type=openapi.TYPE_STRING, description="Shown to the teacher.")},
+        ),
+        responses={
+            200: _course_action_response("Course rejected.", reason=_STR),
+            400: openapi.Response("A rejection reason is required.", _obj(message=_STR)),
+            403: _ACADEMY_ADMIN_ONLY,
+            404: _COURSE_NOT_FOUND,
+        },
+    )
     def post(self, request, course_id, *args, **kwargs):
         reason = request.data.get('reason')
         if not reason:
@@ -1889,8 +2024,20 @@ class AdminCourseRejectAPIView(generics.GenericAPIView):
 
 
 class AdminCoursePublishAPIView(generics.GenericAPIView):
-    permission_classes = [api_permissions.IsAdminRole]
+    """Publish a previously approved course. Academy Admins only (SysAdmins can approve/reject, not publish)."""
+    permission_classes = [api_permissions.IsAcademyAdminRole]
 
+    @swagger_auto_schema(
+        operation_summary="Publish a course (Academy Admin only)",
+        operation_description="Publishes a previously approved course (status Published or Disabled). SysAdmins cannot publish.",
+        request_body=no_body,
+        responses={
+            200: _course_action_response("Course published."),
+            400: openapi.Response("Only approved (previously published/disabled) courses can be published.", _obj(message=_STR)),
+            403: _ACADEMY_ADMIN_ONLY,
+            404: _COURSE_NOT_FOUND,
+        },
+    )
     def post(self, request, course_id, *args, **kwargs):
         course = api_models.Course.objects.filter(id=course_id).first()
         if not course:
@@ -1909,8 +2056,15 @@ class AdminCoursePublishAPIView(generics.GenericAPIView):
 
 
 class AdminCourseUnpublishAPIView(generics.GenericAPIView):
-    permission_classes = [api_permissions.IsAdminRole]
+    """Take a course off the platform. Academy Admins only."""
+    permission_classes = [api_permissions.IsAcademyAdminRole]
 
+    @swagger_auto_schema(
+        operation_summary="Unpublish a course (Academy Admin only)",
+        operation_description="Sets the course to Disabled so it is no longer offered. Existing enrollments and certificates are kept. SysAdmins cannot unpublish.",
+        request_body=no_body,
+        responses={200: _course_action_response("Course unpublished."), 403: _ACADEMY_ADMIN_ONLY, 404: _COURSE_NOT_FOUND},
+    )
     def post(self, request, course_id, *args, **kwargs):
         course = api_models.Course.objects.filter(id=course_id).first()
         if not course:
@@ -1968,11 +2122,19 @@ class AdminUserDetailAPIView(generics.RetrieveUpdateAPIView):
 class AdminDashboardSummaryAPIView(generics.GenericAPIView):
     permission_classes = [api_permissions.IsAdminRole]
 
+    @swagger_auto_schema(
+        operation_summary="Platform totals (SysAdmin only)",
+        responses={200: _obj(
+            total_users=_INT, students=_INT, teachers=_INT, academy_admins=_INT, courses=_INT,
+            published_courses=_INT, pending_review=_INT, enrollments=_INT, completed_courses=_INT,
+        )},
+    )
     def get(self, request, *args, **kwargs):
         return Response({
             "total_users": User.objects.count(),
             "students": User.objects.filter(role=ROLE_STUDENT).count(),
             "teachers": User.objects.filter(role=ROLE_TEACHER).count(),
+            "academy_admins": User.objects.filter(role=ROLE_ACADEMY_ADMIN).count(),
             "courses": api_models.Course.objects.count(),
             "published_courses": api_models.Course.objects.filter(platform_status='Published').count(),
             "pending_review": api_models.Course.objects.filter(platform_status='Review').count(),

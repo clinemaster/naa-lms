@@ -70,7 +70,7 @@ function CertificatesContent() {
 
 export default function CertificatesPage() {
   return (
-    <RequireRole roles={["Student", "Teacher", "Admin"]}>
+    <RequireRole roles={["Student", "Teacher", "Admin", "Academy Admin"]}>
       <CertificatesContent />
     </RequireRole>
   );

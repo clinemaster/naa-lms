@@ -35,6 +35,12 @@ export const adminApi = {
   unpublishCourse: (courseId: number) =>
     apiClient.post<{ message: string; platform_status: string }>(`/admin/courses/${courseId}/unpublish/`),
 
+  setCertificateEnabled: (courseId: number, certificateEnabled: boolean) =>
+    apiClient.patch<{ message: string; certificate_enabled: boolean }>(
+      `/admin/courses/${courseId}/certificate-setting/`,
+      { certificate_enabled: certificateEnabled }
+    ),
+
   listEnrollments: () => apiClient.get<EnrolledCourse[]>("/admin/enrollments/"),
 
   getSiteConfiguration: () =>

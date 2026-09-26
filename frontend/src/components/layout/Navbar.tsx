@@ -17,6 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 
 function dashboardPath(role: string | undefined) {
   if (role === "Admin") return "/admin";
+  if (role === "Academy Admin") return "/admin/courses";
   if (role === "Teacher") return "/teacher";
   return "/dashboard";
 }

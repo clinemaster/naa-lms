@@ -84,7 +84,7 @@ npm run test:e2e
 Three specs live in `frontend/e2e/`:
 - `golden-path.spec.ts` — student registers, browses/searches, enrolls, reaches the learning player.
 - `teacher-course-flow.spec.ts` — teacher creates a course, uploads a real generated video through the resumable pipeline, submits for review. Requires a teacher account `e2e_teacher@example.com` / `Str0ngPass!123` (create via `manage.py shell`, see "Promoting a user" above).
-- `admin-review-flow.spec.ts` — admin approves a pending course. Requires an admin account `e2e_admin@example.com` / `Str0ngPass!123`.
+- `admin-review-flow.spec.ts` — an Academy Admin approves a pending course. Requires an account `e2e_academy_admin@example.com` / `Str0ngPass!123` with role `Academy Admin` (SysAdmins cannot approve).
 
 ## Known limitations (Phase 1 scope)
 

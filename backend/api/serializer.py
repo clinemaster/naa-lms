@@ -469,12 +469,15 @@ class CourseSerializer(serializers.ModelSerializer):
         model = api_models.Course
         fields = [
             'id', 'category', 'teacher', 'teacher_name', 'file', 'title', 'image', 'description', 'language',
-            'level', 'slug', 'platform_status', 'teacher_course_status', 'featured', 'course_id', 'date',
-            'submitted_at', 'reviewed_at', 'rejection_reason', 'curriculum', 'lectures',
+            'level', 'slug', 'platform_status', 'teacher_course_status', 'featured', 'certificate_enabled',
+            'course_id', 'date', 'submitted_at', 'reviewed_at', 'rejection_reason', 'curriculum', 'lectures',
             'total_lessons', 'average_rating', 'rating_count', 'reviews',
         ]
         extra_kwargs = {
             'teacher': {'read_only': True},
+            # Changed only through the admin-only certificate-setting endpoint,
+            # never via the course create/update payloads teachers can send.
+            'certificate_enabled': {'read_only': True},
         }
 
     def get_total_lessons(self, obj):
@@ -516,6 +519,11 @@ class CertificateSerializer(serializers.ModelSerializer):
     def get_student_name(self, obj):
         return obj.user.full_name if obj.user else ""
 
+class EnrollmentCertificateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = api_models.Certificate
+        fields = ['id', 'certificate_id', 'certificate_number', 'pdf', 'date']
+
 class EnrolledCourseSerializer(serializers.ModelSerializer):
     # Nested explicitly (rather than left to Meta.depth's automatic nesting)
     # so computed fields like total_lessons/teacher_name reach the frontend.
@@ -528,6 +536,7 @@ class EnrolledCourseSerializer(serializers.ModelSerializer):
     review = ReviewSerializer(many=False, read_only=True)
     progress_percentage = serializers.SerializerMethodField()
     is_course_completed = serializers.SerializerMethodField()
+    certificate = serializers.SerializerMethodField()
 
     class Meta:
         model = api_models.EnrolledCourse
@@ -538,6 +547,14 @@ class EnrolledCourseSerializer(serializers.ModelSerializer):
 
     def get_is_course_completed(self, obj):
         return obj.is_course_completed()
+
+    def get_certificate(self, obj):
+        # A certificate that was issued stays available even if an
+        # administrator later switches issuance off for the course.
+        if obj.user_id is None:
+            return None
+        certificate = api_models.Certificate.objects.filter(course=obj.course, user_id=obj.user_id).first()
+        return EnrollmentCertificateSerializer(certificate, context=self.context).data if certificate else None
 
     def __init__(self, *args, **kwargs):
         super(EnrolledCourseSerializer, self).__init__(*args, **kwargs)

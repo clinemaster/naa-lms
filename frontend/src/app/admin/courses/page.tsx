@@ -121,7 +121,7 @@ function AdminCoursesContent() {
 
 export default function AdminCoursesPage() {
   return (
-    <RequireRole roles={["Admin"]}>
+    <RequireRole roles={["Admin", "Academy Admin"]}>
       <Suspense fallback={null}>
         <AdminCoursesContent />
       </Suspense>

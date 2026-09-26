@@ -38,6 +38,6 @@ typing_extensions==4.9.0
 tzdata==2023.3
 uritemplate==4.1.1
 urllib3==1.26.18
-moviepy==2.2.1
+moviepy==1.0.3
 reportlab==5.0.1
 qrcode==8.2

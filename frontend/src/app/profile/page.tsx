@@ -167,7 +167,7 @@ function ProfileContent() {
 
 export default function ProfilePage() {
   return (
-    <RequireRole roles={["Student", "Teacher", "Admin"]}>
+    <RequireRole roles={["Student", "Teacher", "Admin", "Academy Admin"]}>
       <ProfileContent />
     </RequireRole>
   );

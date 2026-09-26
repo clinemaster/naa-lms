@@ -6,7 +6,7 @@ from rest_framework.test import APITestCase
 from rest_framework import status
 from django.core.files.uploadedfile import SimpleUploadedFile
 
-from userauths.models import User, ROLE_STUDENT, ROLE_TEACHER, ROLE_ADMIN
+from userauths.models import User, ROLE_STUDENT, ROLE_TEACHER, ROLE_ADMIN, ROLE_ACADEMY_ADMIN
 from api import models as api_models
 from core.models import SiteConfiguration
 
@@ -110,6 +110,7 @@ class CourseWorkflowTests(APITestCase):
     def setUp(self):
         self.teacher_user = make_user('teacher@example.com', role=ROLE_TEACHER)
         self.admin_user = make_user('admin@example.com', role=ROLE_ADMIN)
+        self.academy_admin = make_user('workflow_academy@example.com', role=ROLE_ACADEMY_ADMIN)
         self.teacher, self.course, self.items = build_course_with_lessons(self.teacher_user)
         self.course.platform_status = 'Draft'
         self.course.teacher_course_status = 'Draft'
@@ -137,7 +138,11 @@ class CourseWorkflowTests(APITestCase):
         approve_denied = self.client.post(f'/api/v1/admin/courses/{self.course.id}/approve/')
         self.assertEqual(approve_denied.status_code, status.HTTP_403_FORBIDDEN)
 
+        # A SysAdmin cannot approve either; only an Academy Admin can.
         self.client.force_authenticate(self.admin_user)
+        self.assertEqual(self.client.post(f'/api/v1/admin/courses/{self.course.id}/approve/').status_code, status.HTTP_403_FORBIDDEN)
+
+        self.client.force_authenticate(self.academy_admin)
         approve_response = self.client.post(f'/api/v1/admin/courses/{self.course.id}/approve/')
         self.assertEqual(approve_response.status_code, status.HTTP_200_OK)
 
@@ -148,7 +153,7 @@ class CourseWorkflowTests(APITestCase):
     def test_reject_requires_reason(self):
         self.course.platform_status = 'Review'
         self.course.save()
-        self.client.force_authenticate(self.admin_user)
+        self.client.force_authenticate(self.academy_admin)
         response = self.client.post(f'/api/v1/admin/courses/{self.course.id}/reject/', {})
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 
@@ -249,15 +254,160 @@ class LessonProgressTests(APITestCase):
         response = self.client.get(self._progress_url(self.items[1]))
         self.assertTrue(response.data['unlocked'])
 
-    def test_completing_all_lessons_completes_course_and_issues_certificate(self):
+    def _watch_everything(self):
         for item in self.items:
             for position in range(10, 101, 10):
                 response = self.client.post(self._progress_url(item), {'position': position, 'duration': 100})
                 self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        return response
+
+    def _certificates(self):
+        return api_models.Certificate.objects.filter(course=self.course, user=self.student)
+
+    def test_completing_all_lessons_completes_course_and_issues_certificate(self):
+        self.course.certificate_enabled = True
+        self.course.save()
+
+        response = self._watch_everything()
 
         self.enrollment.refresh_from_db()
         self.assertIsNotNone(self.enrollment.completed_at)
-        self.assertTrue(api_models.Certificate.objects.filter(course=self.course, user=self.student).exists())
+        self.assertTrue(self._certificates().exists())
+        self.assertTrue(response.data['certificate_issued'])
+
+    def test_certificates_are_disabled_by_default(self):
+        self.assertFalse(api_models.Course.objects.get(pk=self.course.pk).certificate_enabled)
+
+    def test_completing_course_without_certificates_marks_complete_but_issues_none(self):
+        response = self._watch_everything()
+
+        self.enrollment.refresh_from_db()
+        self.assertIsNotNone(self.enrollment.completed_at)
+        self.assertTrue(response.data['course_completed'])
+        self.assertFalse(response.data['certificate_issued'])
+        self.assertFalse(self._certificates().exists())
+
+    def test_rewatching_completed_course_does_not_duplicate_certificate(self):
+        self.course.certificate_enabled = True
+        self.course.save()
+        self._watch_everything()
+        first = self._certificates().get()
+
+        self._watch_everything()  # replay every lesson from the start
+        self.client.post(self._progress_url(self.items[0]), {'position': 0, 'duration': 100})
+
+        self.assertEqual(self._certificates().count(), 1)
+        self.assertEqual(self._certificates().get().pk, first.pk)
+
+    def test_issue_certificate_is_idempotent(self):
+        from api.views import issue_certificate
+        self.course.certificate_enabled = True
+        self.course.save()
+
+        first = issue_certificate(self.enrollment)
+        second = issue_certificate(self.enrollment)
+
+        self.assertEqual(first.pk, second.pk)
+        self.assertEqual(self._certificates().count(), 1)
+
+    def test_database_rejects_second_certificate_for_same_student_and_course(self):
+        from django.db import IntegrityError, transaction
+        api_models.Certificate.objects.create(course=self.course, user=self.student)
+        with self.assertRaises(IntegrityError), transaction.atomic():
+            api_models.Certificate.objects.create(course=self.course, user=self.student)
+
+    def test_enabling_certificates_after_completion_issues_one_on_next_activity(self):
+        self._watch_everything()
+        self.assertFalse(self._certificates().exists())
+
+        self.course.certificate_enabled = True
+        self.course.save()
+        self.client.post(self._progress_url(self.items[0]), {'position': 10, 'duration': 100})
+        self.client.post(self._progress_url(self.items[0]), {'position': 20, 'duration': 100})
+
+        self.assertEqual(self._certificates().count(), 1)
+
+    def test_disabling_certificates_keeps_existing_certificate(self):
+        self.course.certificate_enabled = True
+        self.course.save()
+        self._watch_everything()
+
+        self.course.certificate_enabled = False
+        self.course.save()
+        self._watch_everything()
+
+        self.assertEqual(self._certificates().count(), 1)
+
+    def test_enrollment_detail_exposes_certificate_only_when_one_exists(self):
+        url = f'/api/v1/student/course-detail/{self.student.id}/{self.enrollment.enrolled_course_id}/'
+        self.assertIsNone(self.client.get(url).data['certificate'])
+        self.assertFalse(self.client.get(url).data['course']['certificate_enabled'])
+
+        self.course.certificate_enabled = True
+        self.course.save()
+        self._watch_everything()
+
+        data = self.client.get(url).data
+        self.assertTrue(data['course']['certificate_enabled'])
+        self.assertEqual(data['certificate']['certificate_id'], self._certificates().get().certificate_id)
+
+
+@override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
+class CertificateSettingTests(APITestCase):
+    def setUp(self):
+        self.admin_user = make_user('certadmin@example.com', role=ROLE_ACADEMY_ADMIN)
+        self.sysadmin = make_user('certsysadmin@example.com', role=ROLE_ADMIN)
+        self.teacher_user = make_user('certteacher@example.com', role=ROLE_TEACHER)
+        self.student = make_user('certstudent@example.com')
+        self.teacher, self.course, _ = build_course_with_lessons(self.teacher_user, lesson_count=1)
+        self.url = f'/api/v1/admin/courses/{self.course.id}/certificate-setting/'
+
+    def test_academy_admin_can_enable_and_disable(self):
+        self.client.force_authenticate(self.admin_user)
+        response = self.client.patch(self.url, {'certificate_enabled': True}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.course.refresh_from_db()
+        self.assertTrue(self.course.certificate_enabled)
+
+        response = self.client.patch(self.url, {'certificate_enabled': False}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.course.refresh_from_db()
+        self.assertFalse(self.course.certificate_enabled)
+
+    def test_sysadmin_cannot_change_setting_but_can_see_it(self):
+        self.client.force_authenticate(self.sysadmin)
+        response = self.client.patch(self.url, {'certificate_enabled': True}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.course.refresh_from_db()
+        self.assertFalse(self.course.certificate_enabled)
+
+        detail = self.client.get(f'/api/v1/admin/courses/{self.course.id}/')
+        self.assertEqual(detail.status_code, status.HTTP_200_OK)
+        self.assertFalse(detail.data['certificate_enabled'])
+
+    def test_teacher_and_student_cannot_change_setting(self):
+        for user in (self.teacher_user, self.student):
+            self.client.force_authenticate(user)
+            response = self.client.patch(self.url, {'certificate_enabled': True}, format='json')
+            self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.course.refresh_from_db()
+        self.assertFalse(self.course.certificate_enabled)
+
+    def test_setting_must_be_boolean(self):
+        self.client.force_authenticate(self.admin_user)
+        response = self.client.patch(self.url, {'certificate_enabled': 'maybe'}, format='json')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_teacher_course_update_cannot_turn_certificates_on(self):
+        self.client.force_authenticate(self.teacher_user)
+        response = self.client.patch(
+            f'/api/v1/teacher/course-update/{self.teacher.id}/{self.course.id}/',
+            {'title': 'Renamed', 'certificate_enabled': 'true'},
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.course.refresh_from_db()
+        self.assertEqual(self.course.title, 'Renamed')
+        self.assertFalse(self.course.certificate_enabled)
 
 
 @override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
@@ -362,3 +512,129 @@ class SensitiveDataLeakTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self._assert_clean(response)
         self.assertIn('student_name', response.data)
+
+
+@override_settings(MEDIA_ROOT=TEST_MEDIA_ROOT)
+class AcademyAdminTests(APITestCase):
+    """An Academy Admin reviews/publishes courses and sets certificate issuance,
+    and nothing else an Admin can do."""
+
+    def setUp(self):
+        self.academy_admin = make_user('academy@example.com', role=ROLE_ACADEMY_ADMIN)
+        self.admin_user = make_user('sysadmin@example.com', role=ROLE_ADMIN)
+        self.teacher_user = make_user('acteacher@example.com', role=ROLE_TEACHER)
+        self.teacher, self.course, _ = build_course_with_lessons(self.teacher_user, lesson_count=1)
+        self.course.platform_status = 'Review'
+        self.course.teacher_course_status = 'Draft'
+        self.course.save()
+        self.client.force_authenticate(self.academy_admin)
+
+    def test_role_is_not_a_full_admin(self):
+        self.assertTrue(self.academy_admin.can_review_courses)
+        self.assertFalse(self.academy_admin.is_admin_role)
+        self.assertFalse(self.academy_admin.is_staff)
+        self.assertTrue(self.admin_user.can_review_courses)
+        self.assertFalse(self.teacher_user.can_review_courses)
+
+    def test_can_list_and_view_courses(self):
+        self.assertEqual(self.client.get('/api/v1/admin/courses/').status_code, status.HTTP_200_OK)
+        self.assertEqual(self.client.get(f'/api/v1/admin/courses/{self.course.id}/').status_code, status.HTTP_200_OK)
+
+    def test_can_approve_and_records_reviewer(self):
+        response = self.client.post(f'/api/v1/admin/courses/{self.course.id}/approve/')
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.course.refresh_from_db()
+        self.assertEqual(self.course.platform_status, 'Published')
+        self.assertEqual(self.course.reviewed_by, self.academy_admin)
+
+    def test_can_reject_publish_and_unpublish(self):
+        response = self.client.post(f'/api/v1/admin/courses/{self.course.id}/reject/', {'reason': 'Needs work.'})
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+
+        self.course.platform_status = 'Disabled'
+        self.course.save()
+        self.assertEqual(self.client.post(f'/api/v1/admin/courses/{self.course.id}/publish/').status_code, status.HTTP_200_OK)
+        self.assertEqual(self.client.post(f'/api/v1/admin/courses/{self.course.id}/unpublish/').status_code, status.HTTP_200_OK)
+        self.course.refresh_from_db()
+        self.assertEqual(self.course.platform_status, 'Disabled')
+
+    def test_sysadmin_can_view_but_not_review_publish_or_unpublish(self):
+        self.client.force_authenticate(self.admin_user)
+        self.course.platform_status = 'Disabled'
+        self.course.save()
+
+        self.assertEqual(self.client.post(f'/api/v1/admin/courses/{self.course.id}/publish/').status_code, status.HTTP_403_FORBIDDEN)
+        self.course.platform_status = 'Published'
+        self.course.save()
+        self.assertEqual(self.client.post(f'/api/v1/admin/courses/{self.course.id}/unpublish/').status_code, status.HTTP_403_FORBIDDEN)
+        self.course.refresh_from_db()
+        self.assertEqual(self.course.platform_status, 'Published')
+
+        self.course.platform_status = 'Review'
+        self.course.save()
+        self.assertEqual(self.client.post(f'/api/v1/admin/courses/{self.course.id}/approve/').status_code, status.HTTP_403_FORBIDDEN)
+        self.course.refresh_from_db()
+        self.assertEqual(self.course.platform_status, 'Review')
+
+        self.assertEqual(
+            self.client.post(f'/api/v1/admin/courses/{self.course.id}/reject/', {'reason': 'No.'}).status_code, status.HTTP_403_FORBIDDEN
+        )
+        self.course.refresh_from_db()
+        self.assertEqual(self.course.platform_status, 'Review')
+
+        # Viewing courses is still allowed.
+        self.assertEqual(self.client.get('/api/v1/admin/courses/').status_code, status.HTTP_200_OK)
+        self.assertEqual(self.client.get(f'/api/v1/admin/courses/{self.course.id}/').status_code, status.HTTP_200_OK)
+
+    def test_can_set_certificate_issuance(self):
+        response = self.client.patch(
+            f'/api/v1/admin/courses/{self.course.id}/certificate-setting/', {'certificate_enabled': True}, format='json'
+        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.course.refresh_from_db()
+        self.assertTrue(self.course.certificate_enabled)
+
+    def test_cannot_manage_users_or_roles(self):
+        student = make_user('acstudent@example.com')
+        self.assertEqual(self.client.get('/api/v1/admin/users/').status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            self.client.post('/api/v1/admin/users/', {'email': 'x@example.com', 'full_name': 'X', 'role': ROLE_ADMIN}).status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+        # Cannot promote anyone, including themselves.
+        self.assertEqual(
+            self.client.patch(f'/api/v1/admin/users/{student.id}/', {'role': ROLE_ADMIN}).status_code, status.HTTP_403_FORBIDDEN
+        )
+        self.assertEqual(
+            self.client.patch(f'/api/v1/admin/users/{self.academy_admin.id}/', {'role': ROLE_ADMIN}).status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+        self.academy_admin.refresh_from_db()
+        self.assertEqual(self.academy_admin.role, ROLE_ACADEMY_ADMIN)
+
+    def test_cannot_use_other_admin_only_endpoints(self):
+        for url in ('/api/v1/admin/summary/', '/api/v1/admin/enrollments/', '/api/v1/admin/site-configuration/'):
+            self.assertEqual(self.client.get(url).status_code, status.HTTP_403_FORBIDDEN, url)
+
+    def test_gets_no_teacher_powers_over_other_teachers_courses(self):
+        response = self.client.patch(
+            f'/api/v1/teacher/course-update/{self.teacher.id}/{self.course.id}/', {'title': 'Hijacked'}
+        )
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_system_admin_can_assign_the_role(self):
+        student = make_user('promote@example.com')
+        self.client.force_authenticate(self.admin_user)
+        response = self.client.patch(f'/api/v1/admin/users/{student.id}/', {'role': ROLE_ACADEMY_ADMIN})
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        student.refresh_from_db()
+        self.assertEqual(student.role, ROLE_ACADEMY_ADMIN)
+        self.assertFalse(student.is_staff)
+
+    def test_teacher_still_cannot_review(self):
+        self.client.force_authenticate(self.teacher_user)
+        self.assertEqual(self.client.post(f'/api/v1/admin/courses/{self.course.id}/approve/').status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_summary_counts_academy_admins(self):
+        self.client.force_authenticate(self.admin_user)
+        self.assertEqual(self.client.get('/api/v1/admin/summary/').data['academy_admins'], 1)

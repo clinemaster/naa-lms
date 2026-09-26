@@ -29,9 +29,27 @@ export function EnrolledCourseCard({ enrollment }: { enrollment: EnrolledCourse 
           </p>
         </div>
       </CardContent>
-      <CardFooter>
+      <CardFooter className="flex flex-col gap-2">
         {enrollment.is_course_completed ? (
-          <Button variant="secondary" className="w-full" render={<Link href="/certificates">View Certificate</Link>} />
+          <>
+            <p className="text-sm font-medium text-emerald-600">Course completed</p>
+            <Button
+              variant={enrollment.certificate ? "outline" : "secondary"}
+              className="w-full"
+              render={
+                <Link href={`/learning/${enrollment.enrolled_course_id}/${nextLesson?.variant_item_id || ""}`}>
+                  Review Course
+                </Link>
+              }
+            />
+            {enrollment.certificate && (
+              <Button
+                variant="secondary"
+                className="w-full"
+                render={<Link href="/certificates">View/Download Certificate</Link>}
+              />
+            )}
+          </>
         ) : (
           <Button
             className="w-full"

@@ -12,9 +12,12 @@ import { CourseStatusBadge } from "@/components/course/CourseStatusBadge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { adminApi } from "@/lib/api/admin";
 import { ApiRequestError } from "@/lib/api/client";
+import { useAuth } from "@/context/AuthContext";
 import { mediaUrl } from "@/lib/utils";
 import type { PlatformStatus } from "@/lib/types";
 
@@ -36,12 +39,13 @@ function RejectDialog({ courseId }: { courseId: number }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger render={<Button variant="outline">Reject</Button>} />
-      <DialogContent>
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
           <DialogTitle>Reason for rejection</DialogTitle>
         </DialogHeader>
         <Textarea
-          rows={4}
+          rows={10}
+          className="min-h-56"
           placeholder="Course content requires revision..."
           value={reason}
           onChange={(e) => setReason(e.target.value)}
@@ -60,6 +64,11 @@ function RejectDialog({ courseId }: { courseId: number }) {
 
 function CourseReviewContent({ courseId }: { courseId: number }) {
   const router = useRouter();
+  const { user } = useAuth();
+  // Only an Academy Admin approves, rejects, publishes/unpublishes courses and
+  // decides whether a course issues certificates; the server enforces this and these controls
+  // are not shown to anyone else.
+  const isAcademyAdmin = user?.role === "Academy Admin";
   const queryClient = useQueryClient();
 
   const { data: course, isLoading } = useQuery({
@@ -92,6 +101,20 @@ function CourseReviewContent({ courseId }: { courseId: number }) {
       toast.success("Course unpublished.");
       invalidate();
     },
+  });
+
+  const certificateMutation = useMutation({
+    mutationFn: (enabled: boolean) => adminApi.setCertificateEnabled(courseId, enabled),
+    onSuccess: (result) => {
+      toast.success(
+        result.certificate_enabled
+          ? "This course will now issue certificates upon completion."
+          : "This course will no longer issue certificates. Certificates already issued are kept."
+      );
+      invalidate();
+    },
+    onError: (error: unknown) =>
+      toast.error(error instanceof ApiRequestError ? error.message : "Could not update the certificate setting."),
   });
 
   if (isLoading || !course) {
@@ -150,6 +173,34 @@ function CourseReviewContent({ courseId }: { courseId: number }) {
           </CardContent>
         </Card>
 
+        {isAcademyAdmin && (
+          <Card className="mb-6">
+            <CardContent className="space-y-1.5 pt-6">
+              <Label>Issue Certificate Upon Completion</Label>
+              <Select
+                items={{ yes: "Yes", no: "No" }}
+                value={course.certificate_enabled ? "yes" : "no"}
+                onValueChange={(v) => {
+                  const enabled = v === "yes";
+                  if (enabled !== course.certificate_enabled) certificateMutation.mutate(enabled);
+                }}
+              >
+                <SelectTrigger className="w-40" disabled={certificateMutation.isPending}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="yes">Yes</SelectItem>
+                  <SelectItem value="no">No</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Yes: students earn one certificate when they complete the course. No: students can still complete and
+                re-watch the course, but no certificate is issued. Certificates already issued are never removed.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {course.rejection_reason && (
           <Card className="mb-6 border-destructive">
             <CardContent className="pt-6">
@@ -160,7 +211,7 @@ function CourseReviewContent({ courseId }: { courseId: number }) {
         )}
 
         <div className="flex flex-wrap gap-3">
-          {course.platform_status === "Review" && (
+          {isAcademyAdmin && course.platform_status === "Review" && (
             <>
               <Button disabled={approveMutation.isPending} onClick={() => approveMutation.mutate()}>
                 Approve
@@ -168,12 +219,12 @@ function CourseReviewContent({ courseId }: { courseId: number }) {
               <RejectDialog courseId={courseId} />
             </>
           )}
-          {course.platform_status === "Disabled" && (
+          {isAcademyAdmin && course.platform_status === "Disabled" && (
             <Button disabled={publishMutation.isPending} onClick={() => publishMutation.mutate()}>
               Publish
             </Button>
           )}
-          {course.platform_status === "Published" && (
+          {isAcademyAdmin && course.platform_status === "Published" && (
             <Button variant="outline" disabled={unpublishMutation.isPending} onClick={() => unpublishMutation.mutate()}>
               Unpublish
             </Button>
@@ -187,7 +238,7 @@ function CourseReviewContent({ courseId }: { courseId: number }) {
 
 export function CourseReviewClient({ courseId }: { courseId: number }) {
   return (
-    <RequireRole roles={["Admin"]}>
+    <RequireRole roles={["Admin", "Academy Admin"]}>
       <CourseReviewContent courseId={courseId} />
     </RequireRole>
   );

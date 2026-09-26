@@ -10,17 +10,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { adminApi } from "@/lib/api/admin";
 import { ApiRequestError } from "@/lib/api/client";
 import { formatDate } from "@/lib/utils";
-import type { Role } from "@/lib/types";
+import { ROLE_LABELS, type Role } from "@/lib/types";
 
-const ROLES: Role[] = ["Student", "Teacher", "Admin"];
-const ROLE_ITEMS = Object.fromEntries(ROLES.map((r) => [r, r]));
+const ROLES: Role[] = ["Student", "Teacher", "Admin", "Academy Admin"];
+const ROLE_ITEMS = Object.fromEntries(ROLES.map((r) => [r, ROLE_LABELS[r]]));
 
 function CreateUserDialog() {
   const queryClient = useQueryClient();
@@ -80,7 +80,7 @@ function CreateUserDialog() {
               <SelectContent>
                 {ROLES.map((r) => (
                   <SelectItem key={r} value={r}>
-                    {r}
+                    {ROLE_LABELS[r]}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -97,11 +97,10 @@ function CreateUserDialog() {
 
 function AdminUsersContent() {
   const queryClient = useQueryClient();
-  const [roleFilter, setRoleFilter] = useState<string>("all");
 
   const { data: users, isLoading } = useQuery({
-    queryKey: ["admin-users", roleFilter],
-    queryFn: () => adminApi.listUsers(roleFilter === "all" ? undefined : { role: roleFilter as Role }),
+    queryKey: ["admin-users"],
+    queryFn: () => adminApi.listUsers(),
   });
 
   const updateMutation = useMutation({
@@ -125,26 +124,7 @@ function AdminUsersContent() {
           <CreateUserDialog />
         </div>
 
-        <div className="mb-4 w-48">
-          <Select items={{ all: "All roles", ...ROLE_ITEMS }} value={roleFilter} onValueChange={(v) => setRoleFilter(v ?? "all")}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All roles</SelectItem>
-              {ROLES.map((r) => (
-                <SelectItem key={r} value={r}>
-                  {r}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
         <Card>
-          <CardHeader>
-            <CardTitle>Users</CardTitle>
-          </CardHeader>
           <CardContent>
             {isLoading ? (
               <p className="text-muted-foreground">Loading…</p>
@@ -153,6 +133,7 @@ function AdminUsersContent() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-16">S/No</TableHead>
                       <TableHead>Name</TableHead>
                       <TableHead>Email</TableHead>
                       <TableHead>Role</TableHead>
@@ -162,8 +143,9 @@ function AdminUsersContent() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {users?.map((u) => (
+                    {users?.map((u, index) => (
                       <TableRow key={u.id}>
+                        <TableCell className="text-muted-foreground">{index + 1}</TableCell>
                         <TableCell className="font-medium">{u.full_name}</TableCell>
                         <TableCell>{u.email}</TableCell>
                         <TableCell>
@@ -172,13 +154,13 @@ function AdminUsersContent() {
                             value={u.role}
                             onValueChange={(v) => v && updateMutation.mutate({ id: u.id, role: v as Role })}
                           >
-                            <SelectTrigger className="w-32">
+                            <SelectTrigger className="w-40">
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
                               {ROLES.map((r) => (
                                 <SelectItem key={r} value={r}>
-                                  {r}
+                                  {ROLE_LABELS[r]}
                                 </SelectItem>
                               ))}
                             </SelectContent>

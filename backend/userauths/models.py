@@ -4,12 +4,15 @@ from django.db.models.signals import post_save
 
 ROLE_STUDENT = 'Student'
 ROLE_TEACHER = 'Teacher'
+# Stored value stays 'Admin' (existing rows, JWT claims); it is displayed as 'SysAdmin'.
 ROLE_ADMIN = 'Admin'
+ROLE_ACADEMY_ADMIN = 'Academy Admin'
 
 ROLE_CHOICES = (
     (ROLE_STUDENT, 'Student'),
     (ROLE_TEACHER, 'Teacher'),
-    (ROLE_ADMIN, 'Admin'),
+    (ROLE_ADMIN, 'SysAdmin'),
+    (ROLE_ACADEMY_ADMIN, 'Academy Admin'),
 )
 
 
@@ -41,6 +44,19 @@ class User(AbstractUser):
     @property
     def is_admin_role(self):
         return self.role == ROLE_ADMIN or self.is_superuser
+
+    @property
+    def is_academy_admin_role(self):
+        return self.role == ROLE_ACADEMY_ADMIN
+
+    @property
+    def can_review_courses(self):
+        """Course review, publishing and certificate settings: System Admins and Academy Admins.
+
+        Deliberately separate from is_admin_role, which keeps meaning "full System
+        Admin" for user management and every other admin-only check.
+        """
+        return self.is_admin_role or self.is_academy_admin_role
 
     def save(self, *args, **kwargs):
         email_username = self.email.split('@')[0]

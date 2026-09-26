@@ -448,6 +448,13 @@ export function CourseBuilder({ course }: { course?: Course }) {
               </Select>
             </div>
           </div>
+          {isEditMode && (
+            <p className="text-sm text-muted-foreground">
+              Certificate on completion:{" "}
+              <span className="font-medium text-foreground">{course?.certificate_enabled ? "Enabled" : "Disabled"}</span>{" "}
+              (set by an administrator)
+            </p>
+          )}
           <div className="space-y-1.5">
             <Label>Course Image (required, 16:9)</Label>
             {(imagePreviewUrl || course?.image) && (
