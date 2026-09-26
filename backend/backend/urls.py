@@ -15,9 +15,9 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path, include
+from django.urls import path, include, re_path
 from django.conf import settings
-from django.conf.urls.static import static
+from django.views.static import serve
 from django.views.generic import RedirectView
 
 from rest_framework import permissions
@@ -45,8 +45,8 @@ schema_view = get_schema_view(
       contact=openapi.Contact(email="na@outlook.com"),
       license=openapi.License(name="BSD License"),
    ),
-   public=True,
-   permission_classes=(permissions.AllowAny,),
+   public=settings.API_DOCS_PUBLIC,
+   permission_classes=(permissions.AllowAny,) if settings.API_DOCS_PUBLIC else (permissions.IsAdminUser,),
 )
 
 
@@ -59,5 +59,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('api/v1/', include('api.urls')),
 ]
-urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+
+# Static files are served by WhiteNoise (see settings.MIDDLEWARE).
+if settings.SERVE_MEDIA:
+    urlpatterns += [
+        re_path(r'^%s(?P<path>.*)$' % settings.MEDIA_URL.lstrip('/'), serve, {'document_root': settings.MEDIA_ROOT}),
+    ]

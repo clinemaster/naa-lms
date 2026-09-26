@@ -4,7 +4,7 @@ services:
     environment:
       POSTGRES_DB: naa_lms
       POSTGRES_USER: naa_lms
-      POSTGRES_PASSWORD: naa_lms
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-naa_lms}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -13,7 +13,7 @@ services:
       timeout: 5s
       retries: 10
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"  # reachable from this machine only
 
   backend:
     build: ./backend
@@ -21,7 +21,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://naa_lms:naa_lms@db:5432/naa_lms
+      DATABASE_URL: postgres://naa_lms:${POSTGRES_PASSWORD:-naa_lms}@db:5432/naa_lms
       DEBUG: "True"
       ALLOWED_HOSTS: localhost,127.0.0.1,backend
       CORS_ALLOWED_ORIGINS: http://localhost:3000,http://127.0.0.1:3000

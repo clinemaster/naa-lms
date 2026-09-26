@@ -28,9 +28,6 @@ COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 ENTRYPOINT ["docker-entrypoint.sh"]
 
-# Dev-friendly default (matches manage.py runserver used throughout local
-# dev, and serves /admin's static assets with no extra setup). For a real
-# production deploy, override with gunicorn and put a static-file solution
-# (whitenoise or a reverse proxy) in front of it:
-#   command: gunicorn backend.wsgi:application --bind 0.0.0.0:8000
-CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
+# Production server. Long timeout because video uploads are read for their
+# duration (moviepy) inside the request.
+CMD ["gunicorn", "backend.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120"]

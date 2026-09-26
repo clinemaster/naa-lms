@@ -62,11 +62,17 @@ def _env_bool(key, default=False):
     return str(raw).strip().lower() in ('1', 'true', 'yes', 'on')
 
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY', default='django-insecure-br63qge)_$-s#c)9=3cw%&$w01&ricbc1#n8po%-*rdpc((pg9')
-
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = _env_bool('DEBUG', default=False)
+
+# SECURITY WARNING: keep the secret key used in production secret!
+# The insecure fallback is only allowed in development; production must set SECRET_KEY.
+SECRET_KEY = env('SECRET_KEY', default=None)
+if not SECRET_KEY:
+    if not DEBUG:
+        from django.core.exceptions import ImproperlyConfigured
+        raise ImproperlyConfigured("SECRET_KEY must be set when DEBUG is off.")
+    SECRET_KEY = 'django-insecure-br63qge)_$-s#c)9=3cw%&$w01&ricbc1#n8po%-*rdpc((pg9'
 
 
 ALLOWED_HOSTS = _env_list("ALLOWED_HOSTS", default="localhost,127.0.0.1,[::1]")
@@ -99,6 +105,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Serves static files (admin, Swagger) without a separate web server
     'corsheaders.middleware.CorsMiddleware',  # Add this line for CORS headers
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -184,11 +191,25 @@ STATIC_URL = 'static/'
 
 STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]
 
-STATIC_ROOT = BASE_DIR / 'templates'
+# collectstatic output, served by WhiteNoise.
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 
 
 MEDIA_URL = '/media/' #127.0.0.1/media/avator.jpg
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Let Django itself serve uploaded media. On by default in development. In
+# production, prefer nginx or object storage; set SERVE_MEDIA=True only as a
+# stopgap for small deployments without one.
+SERVE_MEDIA = _env_bool('SERVE_MEDIA', default=DEBUG)
+
+# Swagger/ReDoc: open to everyone in development, staff-only otherwise.
+API_DOCS_PUBLIC = _env_bool('API_DOCS_PUBLIC', default=DEBUG)
 
 # Course intro/lecture videos are uploaded as multipart file fields, which Django
 # streams straight to a temp file regardless of size, so this doesn't cap the
@@ -341,6 +362,14 @@ CSRF_TRUSTED_ORIGINS = _env_list(
 
 CSRF_COOKIE_SECURE = not DEBUG
 SESSION_COOKIE_SECURE = not DEBUG
+
+# HTTPS in production. Assumes a proxy or platform that terminates TLS and sets
+# X-Forwarded-Proto. Set SECURE_SSL_REDIRECT=False if the site is not on HTTPS yet.
+if not DEBUG:
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_SSL_REDIRECT = _env_bool('SECURE_SSL_REDIRECT', default=True)
+    # Start with a small value; raise to 31536000 once HTTPS is confirmed working.
+    SECURE_HSTS_SECONDS = int(env('SECURE_HSTS_SECONDS', default=0))
 
 # Use BigAutoField for auto-created primary keys across apps.
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
