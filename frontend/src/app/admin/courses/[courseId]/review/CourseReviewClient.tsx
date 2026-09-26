@@ -144,7 +144,7 @@ function CourseReviewContent({ courseId }: { courseId: number }) {
 
         {image && (
           <div className="relative mb-6 aspect-video w-full overflow-hidden rounded-lg bg-muted">
-            <Image src={image} alt={course.title} fill className="object-cover" />
+            <Image src={image} alt={course.title} fill sizes="(min-width: 896px) 896px, 100vw" className="object-cover" />
           </div>
         )}
 

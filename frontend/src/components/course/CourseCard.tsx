@@ -13,7 +13,7 @@ export function CourseCard({ course }: { course: Course }) {
     <Card className="flex h-full flex-col overflow-hidden pt-0 transition-shadow hover:shadow-md">
       <div className="relative aspect-video w-full bg-muted">
         {image ? (
-          <Image src={image} alt={course.title} fill className="object-cover" />
+          <Image src={image} alt={course.title} fill sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-cover" />
         ) : (
           <div className="flex h-full items-center justify-center text-muted-foreground text-sm">No image</div>
         )}

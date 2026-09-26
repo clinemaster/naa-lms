@@ -77,7 +77,7 @@ export function CourseDetailClient({ slug }: { slug: string }) {
       <Navbar />
       <main className="mx-auto max-w-5xl flex-1 px-4 py-10 sm:px-6 lg:px-8">
         <div className="relative mb-6 aspect-video w-full overflow-hidden rounded-xl bg-muted">
-          {image && <Image src={image} alt={course.title} fill className="object-cover" />}
+          {image && <Image src={image} alt={course.title} fill sizes="(min-width: 1024px) 1024px, 100vw" className="object-cover" />}
         </div>
 
         <div className="grid gap-8 lg:grid-cols-3">

@@ -17,7 +17,7 @@ export function EnrolledCourseCard({ enrollment }: { enrollment: EnrolledCourse 
   return (
     <Card className="flex h-full flex-col overflow-hidden pt-0">
       <div className="relative aspect-video w-full bg-muted">
-        {image && <Image src={image} alt={course.title} fill className="object-cover" />}
+        {image && <Image src={image} alt={course.title} fill sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw" className="object-cover" />}
       </div>
       <CardContent className="flex flex-1 flex-col gap-3">
         <h3 className="line-clamp-2 font-semibold leading-snug">{course.title}</h3>
