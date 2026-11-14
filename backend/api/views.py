@@ -2095,10 +2095,7 @@ class AdminUserListCreateAPIView(generics.ListCreateAPIView):
             queryset = queryset.filter(email__icontains=search)
         return queryset
 
-    def perform_create(self, serializer):
-        user = serializer.save()
-        if user.role == ROLE_TEACHER and not api_models.Teacher.objects.filter(user=user).exists():
-            api_models.Teacher.objects.create(user=user, full_name=user.full_name)
+    # Teacher profiles for Teacher-role users are created by api.signals.
 
 
 class AdminUserDetailAPIView(generics.RetrieveUpdateAPIView):
@@ -2106,17 +2103,6 @@ class AdminUserDetailAPIView(generics.RetrieveUpdateAPIView):
     permission_classes = [api_permissions.IsAdminRole]
     queryset = User.objects.all()
     lookup_url_kwarg = 'user_id'
-
-    def update(self, request, *args, **kwargs):
-        user = self.get_object()
-        previous_role = user.role
-        response = super().update(request, *args, **kwargs)
-
-        user.refresh_from_db()
-        if user.role == ROLE_TEACHER and previous_role != ROLE_TEACHER:
-            api_models.Teacher.objects.get_or_create(user=user, defaults={'full_name': user.full_name})
-
-        return response
 
 
 class AdminDashboardSummaryAPIView(generics.GenericAPIView):

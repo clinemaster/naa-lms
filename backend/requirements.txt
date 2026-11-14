@@ -42,3 +42,4 @@ moviepy==1.0.3
 reportlab==5.0.1
 qrcode==8.2
 whitenoise==6.12.0
+setuptools==80.10.2  # drf-yasg 1.21.7 imports pkg_resources

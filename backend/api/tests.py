@@ -49,6 +49,26 @@ class RoleAndAuthTests(APITestCase):
         self.assertIn('access', response.data)
 
 
+class TeacherProfileSignalTests(APITestCase):
+    def test_teacher_user_gets_profile_without_going_through_api(self):
+        user = make_user('directteacher@example.com', role=ROLE_TEACHER)
+        self.assertTrue(api_models.Teacher.objects.filter(user=user).exists())
+
+    def test_promoting_user_to_teacher_creates_profile_once(self):
+        user = make_user('promoted@example.com')
+        self.assertFalse(api_models.Teacher.objects.filter(user=user).exists())
+        user.role = ROLE_TEACHER
+        user.save()
+        user.save()
+        self.assertEqual(api_models.Teacher.objects.filter(user=user).count(), 1)
+
+    def test_teacher_can_create_course_without_manual_profile(self):
+        teacher = make_user('newcourse@example.com', role=ROLE_TEACHER)
+        self.client.force_authenticate(teacher)
+        response = self.client.post('/api/v1/teacher/course-create/', {})
+        self.assertNotEqual(response.status_code, status.HTTP_404_NOT_FOUND, response.data)
+
+
 class IDORProtectionTests(APITestCase):
     def setUp(self):
         self.alice = make_user('alice@example.com')
@@ -83,7 +103,10 @@ class IDORProtectionTests(APITestCase):
 
 
 def build_course_with_lessons(teacher_user, lesson_count=3):
-    teacher = api_models.Teacher.objects.create(user=teacher_user, full_name=teacher_user.full_name)
+    # Teacher-role users get their profile from api.signals; others need one made here.
+    teacher, _ = api_models.Teacher.objects.get_or_create(
+        user=teacher_user, defaults={'full_name': teacher_user.full_name}
+    )
     category, _ = api_models.Category.objects.get_or_create(title='Financial Audit')
     course = api_models.Course.objects.create(
         teacher=teacher,
