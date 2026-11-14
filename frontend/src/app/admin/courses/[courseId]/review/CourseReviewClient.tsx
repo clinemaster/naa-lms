@@ -5,9 +5,8 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
-import { RequireRole } from "@/components/shared/RequireRole";
+import { Award, Ban } from "lucide-react";
+import { IconChip, IconOption, Page, PageHeader, RequireRole, SectionSkeleton } from "@/components/shared";
 import { CourseStatusBadge } from "@/components/course/CourseStatusBadge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -120,11 +119,9 @@ function CourseReviewContent({ courseId }: { courseId: number }) {
   if (isLoading || !course) {
     return (
       <>
-        <Navbar />
-        <main className="mx-auto max-w-4xl flex-1 px-4 py-10 sm:px-6 lg:px-8">
-          <p className="text-muted-foreground">Loading…</p>
-        </main>
-        <Footer />
+        <Page width="md">
+          <SectionSkeleton />
+        </Page>
       </>
     );
   }
@@ -133,14 +130,15 @@ function CourseReviewContent({ courseId }: { courseId: number }) {
 
   return (
     <>
-      <Navbar />
-      <main className="mx-auto max-w-4xl flex-1 px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-6 flex items-center justify-between">
-          <Button variant="ghost" size="sm" onClick={() => router.push("/admin/courses")}>
-            ← Back to courses
-          </Button>
-          <CourseStatusBadge status={course.platform_status as PlatformStatus} />
-        </div>
+      <Page width="md">
+        <PageHeader
+          leading={
+            <Button variant="ghost" size="sm" onClick={() => router.push("/admin/courses")}>
+              ← Back to courses
+            </Button>
+          }
+          actions={<CourseStatusBadge status={course.platform_status as PlatformStatus} />}
+        />
 
         {image && (
           <div className="relative mb-6 aspect-video w-full overflow-hidden rounded-lg bg-muted">
@@ -185,12 +183,21 @@ function CourseReviewContent({ courseId }: { courseId: number }) {
                   if (enabled !== course.certificate_enabled) certificateMutation.mutate(enabled);
                 }}
               >
-                <SelectTrigger className="w-40" disabled={certificateMutation.isPending}>
+                <SelectTrigger className="w-52" disabled={certificateMutation.isPending}>
+                  {course.certificate_enabled ? (
+                    <IconChip icon={Award} tone="emerald" />
+                  ) : (
+                    <IconChip icon={Ban} tone="slate" />
+                  )}
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="yes">Yes</SelectItem>
-                  <SelectItem value="no">No</SelectItem>
+                <SelectContent className="min-w-72">
+                  <SelectItem value="yes" label="Yes">
+                    <IconOption icon={Award} tone="emerald" title="Yes" description="Students earn a certificate on completion" />
+                  </SelectItem>
+                  <SelectItem value="no" label="No">
+                    <IconOption icon={Ban} tone="slate" title="No" description="Course can be completed without a certificate" />
+                  </SelectItem>
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
@@ -230,8 +237,7 @@ function CourseReviewContent({ courseId }: { courseId: number }) {
             </Button>
           )}
         </div>
-      </main>
-      <Footer />
+      </Page>
     </>
   );
 }

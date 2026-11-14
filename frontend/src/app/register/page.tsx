@@ -7,12 +7,9 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { Loader2, Mail, User, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AuthCard, CenteredPage, FormField, IconInput, PasswordInput } from "@/components/shared";
 import { useAuth } from "@/context/AuthContext";
 import { authApi } from "@/lib/api/auth";
 import { ApiRequestError } from "@/lib/api/client";
@@ -58,49 +55,65 @@ export default function RegisterPage() {
   };
 
   return (
-    <>
-      <Navbar />
-      <main className="flex flex-1 items-center justify-center px-4 py-16">
-        <Card className="w-full max-w-sm">
-          <CardHeader>
-            <CardTitle className="text-2xl">Create your account</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-              <div className="space-y-1.5">
-                <Label htmlFor="full_name">Full name</Label>
-                <Input id="full_name" {...register("full_name")} />
-                {errors.full_name && <p className="text-sm text-destructive">{errors.full_name.message}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="email">Email</Label>
-                <Input id="email" type="email" {...register("email")} />
-                {errors.email && <p className="text-sm text-destructive">{errors.email.message}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="password">Password</Label>
-                <Input id="password" type="password" {...register("password")} />
-                {errors.password && <p className="text-sm text-destructive">{errors.password.message}</p>}
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="password2">Confirm password</Label>
-                <Input id="password2" type="password" {...register("password2")} />
-                {errors.password2 && <p className="text-sm text-destructive">{errors.password2.message}</p>}
-              </div>
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
-                {isSubmitting ? "Creating account…" : "Register"}
-              </Button>
-            </form>
-            <p className="mt-4 text-center text-sm text-muted-foreground">
-              Already have an account?{" "}
-              <Link href="/login" className="font-medium text-primary hover:underline">
-                Login
-              </Link>
-            </p>
-          </CardContent>
-        </Card>
-      </main>
-      <Footer />
-    </>
+    <CenteredPage>
+      <AuthCard
+        icon={UserPlus}
+        title="Create your account"
+        description="Join the National Audit Academy to start learning."
+        footer={
+          <>
+            Already have an account?{" "}
+            <Link href="/login" className="font-medium text-primary hover:underline">
+              Login
+            </Link>
+          </>
+        }
+      >
+        <form onSubmit={handleSubmit(onSubmit)} className="ui-form">
+          <FormField label="Full name" htmlFor="full_name" error={errors.full_name?.message}>
+            <IconInput
+              icon={User}
+              id="full_name"
+              placeholder="Jane Doe"
+              autoComplete="name"
+              aria-invalid={!!errors.full_name}
+              {...register("full_name")}
+            />
+          </FormField>
+          <FormField label="Email" htmlFor="email" error={errors.email?.message}>
+            <IconInput
+              icon={Mail}
+              id="email"
+              type="email"
+              placeholder="name@example.com"
+              autoComplete="email"
+              aria-invalid={!!errors.email}
+              {...register("email")}
+            />
+          </FormField>
+          <FormField label="Password" htmlFor="password" error={errors.password?.message}>
+            <PasswordInput
+              id="password"
+              autoComplete="new-password"
+              placeholder="At least 8 characters"
+              aria-invalid={!!errors.password}
+              {...register("password")}
+            />
+          </FormField>
+          <FormField label="Confirm password" htmlFor="password2" error={errors.password2?.message}>
+            <PasswordInput
+              id="password2"
+              autoComplete="new-password"
+              aria-invalid={!!errors.password2}
+              {...register("password2")}
+            />
+          </FormField>
+          <Button type="submit" className="w-full" disabled={isSubmitting}>
+            {isSubmitting ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}
+            {isSubmitting ? "Creating account…" : "Register"}
+          </Button>
+        </form>
+      </AuthCard>
+    </CenteredPage>
   );
 }

@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
 import { CourseGrid } from "@/components/course/CourseGrid";
 import { Button } from "@/components/ui/button";
 import { courseApi } from "@/lib/api/courses";
@@ -16,7 +14,6 @@ export default function HomePage() {
 
   return (
     <>
-      <Navbar />
       <main className="flex-1">
         <section className="border-b bg-gradient-to-b from-primary/5 to-background">
           <div className="mx-auto flex max-w-5xl flex-col items-center gap-6 px-4 py-20 text-center sm:px-6 lg:px-8">
@@ -41,7 +38,6 @@ export default function HomePage() {
           <CourseGrid courses={courses?.slice(0, 6)} isLoading={isLoading} emptyMessage="No courses published yet." />
         </section>
       </main>
-      <Footer />
     </>
   );
 }

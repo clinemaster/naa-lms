@@ -7,7 +7,7 @@ export const enrollmentApi = {
 
   myCourses: (userId: number) => apiClient.get<EnrolledCourse[]>(`/student/course-list/${userId}/`),
 
-  courseDetail: (userId: number, enrollmentId: number) =>
+  courseDetail: (userId: number, enrollmentId: string) =>
     apiClient.get<EnrolledCourse>(`/student/course-detail/${userId}/${enrollmentId}/`),
 
   summary: (userId: number) =>

@@ -3,7 +3,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { usePathname } from "next/navigation";
+import { LogIn, Menu, UserPlus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -24,7 +25,15 @@ function dashboardPath(role: string | undefined) {
 
 export function Navbar() {
   const { user, logout, isLoading } = useAuth();
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const pathname = usePathname();
+  // The navbar now persists across navigations, so remember which page the
+  // mobile menu was opened on and treat it as closed once the route changes.
+  const [mobileOpenPath, setMobileOpenPath] = useState<string | null>(null);
+  const mobileOpen = mobileOpenPath === pathname;
+  const setMobileOpen = (open: boolean | ((prev: boolean) => boolean)) => {
+    const next = typeof open === "function" ? open(mobileOpen) : open;
+    setMobileOpenPath(next ? pathname : null);
+  };
 
   const initials = user?.full_name
     ? user.full_name
@@ -42,9 +51,9 @@ export function Navbar() {
         <Link href="/" className="flex items-center gap-2 font-semibold">
           <div className="group relative">
             <Image src="/logo.png" alt="National Audit Academy" width={40} height={40} className="rounded-full object-cover" />
-            <div className="pointer-events-none absolute left-0 top-full z-50 mt-2 scale-95 rounded-md border bg-background p-2 opacity-0 shadow-lg transition-all duration-150 group-hover:scale-100 group-hover:opacity-100">
+            <div className="ui-hover-preview left-0">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="National Audit Academy" className="max-w-[min(80vw,320px)]" />
+              <img src="/logo.png" alt="National Audit Academy" />
             </div>
           </div>
           <span className="hidden sm:inline">National Audit Academy</span>
@@ -55,15 +64,24 @@ export function Navbar() {
           <Link href="/courses" className="text-muted-foreground hover:text-foreground">
             Courses
           </Link>
-          {user && (
-            <Link href="/my-courses" className="text-muted-foreground hover:text-foreground">
+          {/* Reserve the link's space while login status loads so "Courses" doesn't shift. */}
+          {(user || isLoading) && (
+            <Link
+              href="/my-courses"
+              aria-hidden={isLoading || undefined}
+              tabIndex={isLoading ? -1 : undefined}
+              className={`text-muted-foreground hover:text-foreground ${isLoading ? "invisible" : ""}`}
+            >
               My Courses
             </Link>
           )}
         </nav>
 
-        <div className="hidden items-center gap-3 md:flex">
-          {isLoading ? null : user ? (
+        {/* Fixed minimum width so the header doesn't reflow when auth resolves. */}
+        <div className="hidden min-w-60 items-center justify-end gap-2 md:flex">
+          {isLoading ? (
+            <div className="h-9 w-9 animate-pulse rounded-full bg-muted" aria-hidden />
+          ) : user ? (
             <DropdownMenu>
               <DropdownMenuTrigger className="flex items-center gap-2 rounded-full outline-none">
                 <Avatar className="h-9 w-9">
@@ -85,17 +103,32 @@ export function Navbar() {
             </DropdownMenu>
           ) : (
             <>
-              <Button variant="ghost" render={<Link href="/login">Login</Link>} />
-              <Button render={<Link href="/register">Register</Link>} />
+              <Button
+                variant="outline"
+                render={
+                  <Link href="/login">
+                    <LogIn className="size-4" />
+                    Login
+                  </Link>
+                }
+              />
+              <Button
+                render={
+                  <Link href="/register">
+                    <UserPlus className="size-4" />
+                    Register
+                  </Link>
+                }
+              />
             </>
           )}
         </div>
 
         <div className="group relative hidden md:block">
           <Image src="/iso-naot.jpg" alt="ISO certification" width={40} height={40} />
-          <div className="pointer-events-none absolute right-0 top-full z-50 mt-2 scale-95 rounded-md border bg-background p-2 opacity-0 shadow-lg transition-all duration-150 group-hover:scale-100 group-hover:opacity-100">
+          <div className="ui-hover-preview right-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/iso-naot.jpg" alt="ISO certification" className="max-w-[min(80vw,320px)]" />
+            <img src="/iso-naot.jpg" alt="ISO certification" />
           </div>
         </div>
 

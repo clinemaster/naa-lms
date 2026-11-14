@@ -3,12 +3,8 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
-import { RequireRole } from "@/components/shared/RequireRole";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -17,6 +13,7 @@ import { authApi } from "@/lib/api/auth";
 import { ApiRequestError } from "@/lib/api/client";
 import { mediaUrl } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
+import { FormField, Page, PageHeader, PasswordInput, RequireRole, SectionSkeleton } from "@/components/shared";
 
 function ProfileContent() {
   const { user } = useAuth();
@@ -82,12 +79,11 @@ function ProfileContent() {
 
   return (
     <>
-      <Navbar />
-      <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-10 sm:px-6 lg:px-8">
-        <h1 className="mb-6 text-3xl font-semibold">Profile</h1>
+      <Page width="sm">
+        <PageHeader title="Profile" />
 
         {isLoading ? (
-          <p className="text-muted-foreground">Loading…</p>
+          <SectionSkeleton />
         ) : (
           <Card className="mb-6">
             <CardHeader>
@@ -101,26 +97,21 @@ function ProfileContent() {
                 </Avatar>
                 <Input type="file" accept="image/*" onChange={(e) => setImageFile(e.target.files?.[0] || null)} />
               </div>
-              <div className="space-y-1.5">
-                <Label>Email</Label>
+              <FormField label="Email">
                 <Input value={user?.email || ""} disabled />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="full_name">Full name</Label>
+              </FormField>
+              <FormField label="Full name" htmlFor="full_name">
                 <Input id="full_name" value={fullName} onChange={(e) => setFullName(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="country">Country</Label>
+              </FormField>
+              <FormField label="Country" htmlFor="country">
                 <Input id="country" value={country} onChange={(e) => setCountry(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="bio">Short bio</Label>
+              </FormField>
+              <FormField label="Short bio" htmlFor="bio">
                 <Input id="bio" value={bio} onChange={(e) => setBio(e.target.value)} />
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="about">About</Label>
+              </FormField>
+              <FormField label="About" htmlFor="about">
                 <Textarea id="about" rows={4} value={about} onChange={(e) => setAbout(e.target.value)} />
-              </div>
+              </FormField>
               <Button disabled={updateMutation.isPending} onClick={() => updateMutation.mutate()}>
                 Save Changes
               </Button>
@@ -133,24 +124,22 @@ function ProfileContent() {
             <CardTitle>Change Password</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-1.5">
-              <Label htmlFor="old_password">Current password</Label>
-              <Input
+            <FormField label="Current password" htmlFor="old_password">
+              <PasswordInput
                 id="old_password"
-                type="password"
+                autoComplete="current-password"
                 value={oldPassword}
                 onChange={(e) => setOldPassword(e.target.value)}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="new_password">New password</Label>
-              <Input
+            </FormField>
+            <FormField label="New password" htmlFor="new_password">
+              <PasswordInput
                 id="new_password"
-                type="password"
+                autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
               />
-            </div>
+            </FormField>
             <Button
               disabled={!oldPassword || !newPassword || passwordMutation.isPending}
               onClick={() => passwordMutation.mutate()}
@@ -159,8 +148,7 @@ function ProfileContent() {
             </Button>
           </CardContent>
         </Card>
-      </main>
-      <Footer />
+      </Page>
     </>
   );
 }

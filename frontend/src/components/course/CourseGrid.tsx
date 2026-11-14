@@ -1,5 +1,6 @@
 import { CourseCard } from "./CourseCard";
 import { Skeleton } from "@/components/ui/skeleton";
+import { CardGrid } from "@/components/shared/page";
 import type { Course } from "@/lib/types";
 
 export function CourseGrid({
@@ -13,11 +14,11 @@ export function CourseGrid({
 }) {
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <CardGrid>
         {Array.from({ length: 6 }).map((_, i) => (
           <Skeleton key={i} className="h-80 w-full rounded-xl" />
         ))}
-      </div>
+      </CardGrid>
     );
   }
 
@@ -26,10 +27,10 @@ export function CourseGrid({
   }
 
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <CardGrid>
       {courses.map((course) => (
         <CourseCard key={course.id} course={course} />
       ))}
-    </div>
+    </CardGrid>
   );
 }

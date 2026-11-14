@@ -2,15 +2,13 @@
 
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search } from "lucide-react";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
+import { Search, LayoutGrid, Signal } from "lucide-react";
 import { CourseGrid } from "@/components/course/CourseGrid";
-import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { courseApi } from "@/lib/api/courses";
+import { LEVELS, LevelOption } from "@/components/course/course-options";
+import { IconInput, Page, PageHeader } from "@/components/shared";
 
-const LEVELS = ["Beginner", "Intermediate", "Advanced"];
 
 export default function CoursesPage() {
   const [searchInput, setSearchInput] = useState("");
@@ -41,16 +39,14 @@ export default function CoursesPage() {
 
   return (
     <>
-      <Navbar />
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:px-6 lg:px-8">
-        <h1 className="mb-6 text-3xl font-semibold">Browse Courses</h1>
+      <Page width="full">
+        <PageHeader title="Browse Courses" />
 
         <div className="mb-8 flex flex-col gap-3 sm:flex-row">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input
+          <div className="flex-1">
+            <IconInput
+              icon={Search}
               placeholder="Search courses (e.g. Financial Audit, IT Audit, Procurement)"
-              className="pl-9"
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
             />
@@ -60,13 +56,14 @@ export default function CoursesPage() {
             value={category}
             onValueChange={(value) => setCategory(value ?? "all")}
           >
-            <SelectTrigger className="sm:w-52">
+            <SelectTrigger className="w-full sm:w-56">
+              <LayoutGrid className="text-muted-foreground" />
               <SelectValue placeholder="Category" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All categories</SelectItem>
               {categories?.map((c) => (
-                <SelectItem key={c.id} value={c.slug}>
+                <SelectItem key={c.id} value={c.slug} label={c.title}>
                   {c.title}
                 </SelectItem>
               ))}
@@ -77,14 +74,15 @@ export default function CoursesPage() {
             value={level}
             onValueChange={(value) => setLevel(value ?? "all")}
           >
-            <SelectTrigger className="sm:w-44">
+            <SelectTrigger className="w-full sm:w-48">
+              <Signal className="text-muted-foreground" />
               <SelectValue placeholder="Level" />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent className="min-w-60">
               <SelectItem value="all">All levels</SelectItem>
               {LEVELS.map((l) => (
-                <SelectItem key={l} value={l}>
-                  {l}
+                <SelectItem key={l} value={l} label={l}>
+                  <LevelOption level={l} />
                 </SelectItem>
               ))}
             </SelectContent>
@@ -96,8 +94,7 @@ export default function CoursesPage() {
           isLoading={isLoading}
           emptyMessage="No courses match your search. Try a different keyword or filter."
         />
-      </main>
-      <Footer />
+      </Page>
     </>
   );
 }

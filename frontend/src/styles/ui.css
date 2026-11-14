@@ -1,0 +1,514 @@
+/*
+ * Shared UI styles for the National Audit Academy LMS.
+ *
+ * One place for the look introduced across the app: the 44px control size,
+ * the field surface (inputs, text areas, dropdowns, search), option lists,
+ * coloured icon chips, status pills, filter tabs and page/form layout.
+ *
+ * Everything lives in the `components` layer, so a plain Tailwind utility on
+ * an element (e.g. `w-52`, `pl-10`) still overrides these defaults.
+ */
+
+:root {
+  /* Height of every control: inputs, dropdowns, buttons and tabs. */
+  --control-h: 2.75rem;
+  /* Compact controls inside dense lists (e.g. remove buttons). */
+  --control-h-sm: 2.25rem;
+  --control-h-lg: 3rem;
+}
+
+@layer components {
+  /* ---------------------------------------------------------------- Page */
+
+  /* Standard page body. Pair with a max-w-* utility for the page width. */
+  .ui-page {
+    @apply mx-auto w-full flex-1 px-4 py-10 sm:px-6 lg:px-8;
+  }
+
+  /* Title row: heading on the left, actions on the right, wraps on mobile. */
+  .ui-page-header {
+    @apply mb-6 flex flex-wrap items-center justify-between gap-3;
+  }
+
+  /* Back button + title block on the left of the header row. */
+  .ui-page-header-main {
+    @apply flex min-w-0 items-center gap-3;
+  }
+
+  .ui-page-heading {
+    @apply flex min-w-0 flex-col gap-1;
+  }
+
+  /* Title plus an inline badge (e.g. course status). */
+  .ui-page-title-row {
+    @apply flex flex-wrap items-center gap-3;
+  }
+
+  .ui-page-title {
+    @apply text-3xl font-semibold;
+  }
+
+  .ui-page-description {
+    @apply text-muted-foreground;
+  }
+
+  .ui-page-actions {
+    @apply flex flex-wrap items-center gap-2;
+  }
+
+  /* Vertical rhythm between titled sections of a page. */
+  .ui-page-section {
+    @apply mb-10 last:mb-0;
+  }
+
+  /* Centered page for single-card screens such as login and register. */
+  .ui-page-center {
+    @apply flex flex-1 items-center justify-center px-4 py-16;
+  }
+
+  /* Heading for a section within a page (e.g. "My Courses"). */
+  .ui-section-title {
+    @apply mb-4 text-xl font-semibold;
+  }
+
+  /* Responsive grid of course cards: 1 / 2 / 3 columns. */
+  .ui-card-grid {
+    @apply grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3;
+  }
+
+  /* Big number on a dashboard stat card. */
+  .ui-stat-value {
+    @apply text-3xl font-bold;
+  }
+
+  /* Card body that centres a chart. */
+  .ui-chart-card {
+    @apply flex items-center justify-center pt-6;
+  }
+
+  /* ---------------------------------------------------------------- Cards */
+
+  /* EmptyState: dashed placeholder for empty lists. */
+  .ui-empty-state {
+    @apply flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed px-4 py-16 text-center;
+  }
+
+  .ui-empty-state-icon {
+    @apply size-10 text-muted-foreground/60;
+  }
+
+  .ui-empty-state-title {
+    @apply text-muted-foreground;
+  }
+
+  .ui-empty-state-description {
+    @apply text-sm text-muted-foreground/80;
+  }
+
+  /* MediaCard: 16:9 image, title, body. */
+  .ui-media-card-image {
+    @apply relative aspect-video w-full shrink-0 bg-muted;
+  }
+
+  .ui-media-card-placeholder {
+    @apply flex h-full items-center justify-center text-sm text-muted-foreground;
+  }
+
+  .ui-media-card-body {
+    @apply flex flex-1 flex-col gap-2;
+  }
+
+  .ui-media-card-title {
+    @apply line-clamp-2 font-semibold leading-snug;
+  }
+
+  /* Small muted line of card details (teacher, lesson count, …). */
+  .ui-card-meta {
+    @apply text-xs text-muted-foreground;
+  }
+
+  /* StatCard: big number and caption, vertically centred. */
+  .ui-stat-card-body {
+    @apply flex flex-1 flex-col justify-center pt-6;
+  }
+
+  .ui-stat-label {
+    @apply text-sm text-muted-foreground;
+  }
+
+  /* IconCard: leading icon, title, description, actions. */
+  .ui-icon-card-body {
+    @apply flex items-start gap-4 pt-6;
+  }
+
+  .ui-icon-card-icon {
+    @apply size-10 shrink-0 text-primary;
+  }
+
+  .ui-icon-card-text {
+    @apply min-w-0 flex-1;
+  }
+
+  .ui-icon-card-title {
+    @apply font-medium;
+  }
+
+  .ui-icon-card-description {
+    @apply text-sm text-muted-foreground;
+  }
+
+  .ui-icon-card-actions {
+    @apply mt-3 flex flex-wrap gap-2;
+  }
+
+  /* Placeholder lines shown while a section loads. */
+  .ui-section-skeleton {
+    @apply space-y-3;
+  }
+
+  /* "Already have an account? Login" line under an auth form. */
+  .ui-auth-footer {
+    @apply mt-4 text-center text-sm text-muted-foreground;
+  }
+
+  /* Hover preview card (e.g. enlarged logo in the header). */
+  .ui-hover-preview {
+    @apply pointer-events-none absolute top-full z-50 mt-2 scale-95 rounded-xl border bg-background p-2 opacity-0 shadow-lg transition-[opacity,scale] duration-150 group-hover:scale-100 group-hover:opacity-100;
+
+    & img {
+      @apply max-w-[min(80vw,320px)];
+    }
+  }
+
+  /* ---------------------------------------------------------------- Forms */
+
+  .ui-form {
+    @apply space-y-4;
+  }
+
+  /* Label + control + error message. */
+  .ui-form-group {
+    @apply space-y-1.5;
+  }
+
+  .ui-field-error {
+    @apply text-sm text-destructive;
+  }
+
+  .ui-field-hint {
+    @apply text-sm text-muted-foreground;
+  }
+
+  /*
+   * Field surface shared by inputs, text areas and dropdown triggers:
+   * rounded, white, light shadow, green tint on hover and focus/open.
+   */
+  .ui-field {
+    @apply rounded-xl border border-input bg-background text-base shadow-xs transition-[color,background-color,border-color,box-shadow] outline-none md:text-sm;
+    @apply placeholder:text-muted-foreground;
+    @apply hover:border-primary/50 hover:bg-muted/40;
+    @apply focus-visible:border-primary focus-visible:ring-3 focus-visible:ring-primary/15;
+    @apply disabled:cursor-not-allowed disabled:bg-input/50 disabled:opacity-50;
+    @apply aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20;
+    @apply dark:bg-input/30 dark:disabled:bg-input/80 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40;
+  }
+
+  /* Single-line control height and padding. */
+  .ui-field-control {
+    @apply px-3.5;
+    height: var(--control-h);
+  }
+
+  /* Dropdown trigger: the field surface plus an "open" state and turning chevron. */
+  .ui-select-trigger {
+    @apply data-[popup-open]:border-primary data-[popup-open]:ring-3 data-[popup-open]:ring-primary/15;
+
+    &:disabled:hover {
+      @apply border-input bg-background;
+    }
+
+    & > svg:last-child {
+      @apply transition-transform duration-200;
+    }
+
+    &[data-popup-open] > svg:last-child {
+      rotate: 180deg;
+    }
+  }
+
+  .ui-select-trigger-sm {
+    @apply rounded-lg px-3;
+    height: var(--control-h-sm);
+  }
+
+  /* Wrapper for a field with a leading icon (and optional trailing action). */
+  .ui-field-wrap {
+    @apply relative;
+
+    & > .ui-field {
+      @apply pl-10;
+    }
+  }
+
+  .ui-field-icon {
+    @apply pointer-events-none absolute top-1/2 left-3.5 size-4 -translate-y-1/2 text-muted-foreground;
+  }
+
+  /* Small button inside the right edge of a field (e.g. show password). */
+  .ui-field-action {
+    @apply absolute top-1/2 right-2 flex size-8 -translate-y-1/2 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground;
+  }
+
+  /* --------------------------------------------------------- Option lists */
+
+  /* Dropdown panel: opens below the field, a little wider than it. */
+  .ui-popup {
+    @apply rounded-xl bg-popover p-1.5 text-popover-foreground shadow-lg ring-1 ring-foreground/10;
+    width: calc(var(--anchor-width) + 2rem);
+  }
+
+  .ui-option {
+    @apply relative flex w-full cursor-pointer items-center gap-2 rounded-lg py-2 pr-9 pl-2.5 text-sm outline-hidden transition-colors select-none;
+    @apply focus:bg-accent focus:text-accent-foreground data-highlighted:bg-accent;
+    @apply data-selected:bg-primary/10 data-selected:font-medium data-selected:text-primary;
+    @apply data-disabled:pointer-events-none data-disabled:opacity-50;
+  }
+
+  /* Title + one-line description stacked inside an option. */
+  .ui-option-text {
+    @apply flex flex-col gap-0.5;
+  }
+
+  .ui-option-description {
+    @apply text-xs font-normal text-muted-foreground;
+  }
+
+  .ui-option-empty {
+    @apply px-2.5 py-2 text-sm text-muted-foreground;
+  }
+
+  /* --------------------------------------------------------------- Tables */
+
+  /* Framed, horizontally scrollable table container. */
+  .ui-table-container {
+    @apply relative w-full overflow-x-auto rounded-2xl border bg-card shadow-xs;
+  }
+
+  .ui-table {
+    @apply w-full caption-bottom text-sm;
+  }
+
+  .ui-table-header {
+    @apply bg-muted/50;
+
+    & tr {
+      @apply border-b;
+    }
+    & tr:hover {
+      @apply bg-transparent;
+    }
+  }
+
+  .ui-table-body tr:last-child {
+    @apply border-0;
+  }
+
+  .ui-table-footer {
+    @apply border-t bg-muted/50 font-medium;
+  }
+
+  .ui-table-row {
+    @apply border-b transition-colors hover:bg-muted/40 has-aria-expanded:bg-muted/40 data-[state=selected]:bg-muted;
+  }
+
+  /* Column heading: small, uppercase, muted. */
+  .ui-table-head {
+    @apply h-11 px-4 text-left align-middle text-xs font-semibold tracking-wide whitespace-nowrap text-muted-foreground uppercase;
+  }
+
+  /* Body cell: roomy enough for 44px controls in a row. */
+  .ui-table-cell {
+    @apply px-4 py-3 align-middle whitespace-nowrap;
+  }
+
+  /* Serial-number column. */
+  .ui-table-index {
+    @apply w-16 text-muted-foreground tabular-nums;
+  }
+
+  /* Right-aligned column for actions. */
+  .ui-table-actions {
+    @apply text-right;
+
+    & > .ui-table-actions-group {
+      @apply inline-flex items-center justify-end gap-2;
+    }
+  }
+
+  .ui-table-empty {
+    @apply px-4 py-12 text-center text-sm text-muted-foreground;
+  }
+
+  .ui-table-caption {
+    @apply mt-4 text-sm text-muted-foreground;
+  }
+
+  /* ------------------------------------------------- Icon chips and pills */
+
+  /* Icons inside chips and pills use size-(--icon-size), set per size below. */
+  .ui-chip {
+    @apply inline-flex size-6 shrink-0 items-center justify-center rounded-md;
+    --icon-size: 0.875rem;
+  }
+
+  /* Chip used inside option rows. */
+  .ui-chip-md {
+    @apply size-7;
+  }
+
+  /* Chip used beside a card or dialog title. */
+  .ui-chip-lg {
+    @apply size-11 rounded-xl;
+    --icon-size: 1.25rem;
+  }
+
+  /* Read-only status label. */
+  .ui-pill {
+    @apply inline-flex h-7 w-fit shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-medium whitespace-nowrap;
+    --icon-size: 0.875rem;
+  }
+
+  .ui-tone-sky {
+    @apply bg-sky-500/15 text-sky-700 dark:text-sky-300;
+  }
+  .ui-tone-emerald {
+    @apply bg-emerald-500/15 text-emerald-700 dark:text-emerald-300;
+  }
+  .ui-tone-rose {
+    @apply bg-rose-500/15 text-rose-700 dark:text-rose-300;
+  }
+  .ui-tone-amber {
+    @apply bg-amber-500/15 text-amber-700 dark:text-amber-300;
+  }
+  .ui-tone-slate {
+    @apply bg-muted text-muted-foreground;
+  }
+
+  /* Small level indicator bars (Beginner / Intermediate / Advanced). */
+  .ui-level-bars {
+    @apply flex h-3.5 items-end gap-0.5;
+
+    & > span {
+      @apply w-1 rounded-sm bg-muted-foreground/25;
+    }
+    & > span[data-on] {
+      @apply bg-primary;
+    }
+  }
+
+  /* Short code badge, e.g. EN / FR for languages. */
+  .ui-code-badge {
+    @apply inline-flex h-5 w-7 items-center justify-center rounded-md bg-muted text-[10px] font-semibold tracking-wide text-muted-foreground;
+  }
+}
+
+/*
+ * Overrides for library components (Card, Dialog header, Tabs).
+ * These sit outside any layer on purpose: the library components ship their
+ * own utility classes (e.g. CardHeader is a grid, TabsTrigger fills its list),
+ * and unlayered rules are the only ones that take precedence over utilities.
+ */
+/* ---------------------------------------------------------------- Cards */
+
+/* Icon chip + title + description, used by auth cards and dialogs. */
+.ui-card-heading {
+  @apply flex flex-row items-center gap-3;
+}
+
+.ui-card-heading-text {
+  @apply space-y-0.5;
+}
+
+/* Card for single-purpose screens (login, register). */
+.ui-auth-card {
+  @apply w-full max-w-md rounded-2xl shadow-lg;
+}
+
+/* MediaCard frame: full height in a grid, image flush with the top edge. */
+.ui-media-card {
+  @apply h-full pt-0;
+}
+
+.ui-media-card-interactive {
+  @apply transition-shadow hover:shadow-md;
+}
+
+/* ----------------------------------------------------------------- Tabs */
+
+.ui-tab-list {
+  @apply flex w-full flex-wrap justify-start gap-2 bg-transparent p-0 group-data-horizontal/tabs:h-auto;
+}
+
+/* Filter tab drawn as its own button; pair with a data-active:bg-* colour. */
+.ui-tab {
+  @apply flex-none gap-2 rounded-xl border-input px-4 text-sm font-semibold shadow-xs;
+  /* Unselected look only, so each tab's data-active colour still applies. */
+  @apply not-data-active:bg-background not-data-active:text-foreground/70;
+  @apply not-data-active:hover:border-primary/50 not-data-active:hover:bg-muted/40;
+  @apply data-active:border-transparent data-active:shadow-sm;
+  height: var(--control-h);
+
+  & > svg {
+    @apply size-4;
+  }
+}
+
+/*
+ * Navigation motion.
+ *
+ * Pages fade in when they mount instead of popping in. Only opacity animates,
+ * so nothing moves position. Loading skeletons wait 150ms before appearing,
+ * so fast navigations never flash a skeleton, while their space is reserved
+ * from the start so the layout doesn't jump when they show.
+ */
+@keyframes ui-fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@layer components {
+  .ui-page,
+  .ui-page-center,
+  .ui-route-enter {
+    animation: ui-fade-in 180ms ease-out both;
+  }
+
+  /* Must come after the rule above so skeleton pages use the delayed fade. */
+  .ui-loading-delay {
+    animation: ui-fade-in 150ms ease-out 150ms both;
+  }
+
+  /* Course header in the lesson player: fixed height so the sticky sidebar
+     below it can size itself exactly. */
+  .ui-lesson-header {
+    @apply sticky top-0 z-20 flex h-16 items-center gap-3 border-b bg-background/95 px-4 backdrop-blur supports-[backdrop-filter]:bg-background/80;
+  }
+
+  /* Lesson list: sticks under the course header on wide screens. */
+  .ui-lesson-sidebar {
+    @apply lg:sticky lg:top-16 lg:h-[calc(100vh-4rem)] lg:self-start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ui-page,
+  .ui-page-center,
+  .ui-route-enter,
+  .ui-loading-delay {
+    animation: none;
+  }
+}

@@ -4,8 +4,6 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { courseApi } from "@/lib/api/courses";
@@ -13,6 +11,7 @@ import { enrollmentApi } from "@/lib/api/enrollment";
 import { ApiRequestError } from "@/lib/api/client";
 import { mediaUrl } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
+import { Page } from "@/components/shared";
 
 export function CourseDetailClient({ slug }: { slug: string }) {
   const { user } = useAuth();
@@ -40,13 +39,11 @@ export function CourseDetailClient({ slug }: { slug: string }) {
   if (isLoading) {
     return (
       <>
-        <Navbar />
-        <main className="mx-auto max-w-5xl flex-1 px-4 py-10 sm:px-6 lg:px-8">
+        <Page width="lg">
           <Skeleton className="mb-6 aspect-video w-full rounded-xl" />
           <Skeleton className="mb-2 h-8 w-2/3" />
           <Skeleton className="h-4 w-full" />
-        </main>
-        <Footer />
+        </Page>
       </>
     );
   }
@@ -54,11 +51,9 @@ export function CourseDetailClient({ slug }: { slug: string }) {
   if (!course) {
     return (
       <>
-        <Navbar />
-        <main className="mx-auto max-w-5xl flex-1 px-4 py-16 text-center sm:px-6 lg:px-8">
+        <Page width="lg" className="py-16 text-center">
           <p className="text-muted-foreground">This course is not available.</p>
-        </main>
-        <Footer />
+        </Page>
       </>
     );
   }
@@ -74,8 +69,7 @@ export function CourseDetailClient({ slug }: { slug: string }) {
 
   return (
     <>
-      <Navbar />
-      <main className="mx-auto max-w-5xl flex-1 px-4 py-10 sm:px-6 lg:px-8">
+      <Page width="lg">
         <div className="relative mb-6 aspect-video w-full overflow-hidden rounded-xl bg-muted">
           {image && <Image src={image} alt={course.title} fill sizes="(min-width: 1024px) 1024px, 100vw" className="object-cover" />}
         </div>
@@ -88,7 +82,7 @@ export function CourseDetailClient({ slug }: { slug: string }) {
             </p>
             <p className="mb-8 leading-relaxed text-foreground/90">{course.description}</p>
 
-            <h2 className="mb-4 text-xl font-semibold">Course Content</h2>
+            <h2 className="ui-section-title">Course Content</h2>
             <div className="divide-y rounded-lg border">
               {course.curriculum?.map((variant) => (
                 <div key={variant.id}>
@@ -126,8 +120,7 @@ export function CourseDetailClient({ slug }: { slug: string }) {
             </Button>
           </div>
         </div>
-      </main>
-      <Footer />
+      </Page>
     </>
   );
 }

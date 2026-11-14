@@ -26,7 +26,7 @@ export function LessonSidebar({
         <Progress value={progressPercentage} />
         <p className="mt-1 text-xs text-muted-foreground">{progressPercentage}% complete</p>
       </div>
-      <nav className="flex-1 overflow-y-auto">
+      <nav className="flex-1 overflow-y-auto [scrollbar-gutter:stable]">
         {lessons.map((lesson, index) => {
           const isCompleted = completedIds.has(lesson.id);
           const isCurrent = lesson.variant_item_id === currentLessonId;

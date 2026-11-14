@@ -2,12 +2,9 @@
 
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
-import { RequireRole } from "@/components/shared/RequireRole";
-import { Donut } from "@/components/shared/Donut";
+import { BookOpen, Users } from "lucide-react";
+import { ChartCard, Donut, Page, PageHeader, RequireRole } from "@/components/shared";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { adminApi } from "@/lib/api/admin";
 
 function AdminDashboardContent() {
@@ -30,65 +27,74 @@ function AdminDashboardContent() {
 
   return (
     <>
-      <Navbar />
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-3xl font-semibold">SysAdmin Dashboard</h1>
-          <div className="flex gap-2">
-            <Button variant="outline" render={<Link href="/admin/users">Manage Users</Link>} />
-            <Button render={<Link href="/admin/courses">Manage Courses</Link>} />
-          </div>
-        </div>
+      <Page width="full">
+        <PageHeader
+          title="SysAdmin Dashboard"
+          actions={
+            <>
+              <Button
+                variant="outline"
+                render={
+                  <Link href="/admin/users">
+                    <Users className="size-4" />
+                    Manage Users
+                  </Link>
+                }
+              />
+              <Button
+                render={
+                  <Link href="/admin/courses">
+                    <BookOpen className="size-4" />
+                    Manage Courses
+                  </Link>
+                }
+              />
+            </>
+          }
+        />
 
         <div className="mb-10 grid grid-cols-2 gap-4 sm:grid-cols-3">
-          <Card>
-            <CardContent className="flex items-center justify-center pt-6">
-              <Donut
-                total={totalUsers}
-                centerValue={totalUsers}
-                centerLabel="Total Users"
-                showDirectLabels
-                segments={[
-                  { label: "Students", count: students, color: "#2a78d6" },
-                  { label: "Teachers", count: teachers, color: "#eb6834" },
-                  { label: "SysAdmins", count: admins, color: "#1baf7a" },
-                  { label: "Academy Admins", count: academyAdmins, color: "#8a63d2" },
-                ]}
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex items-center justify-center pt-6">
-              <Donut
-                total={totalCourses}
-                centerValue={totalCourses}
-                centerLabel="Courses"
-                showDirectLabels
-                segments={[
-                  { label: "Published", count: published, color: "#1baf7a" },
-                  { label: "Pending Review", count: pendingReview, color: "#eda100" },
-                  { label: "Other", count: otherCourses, color: "#898781" },
-                ]}
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex items-center justify-center pt-6">
-              <Donut
-                total={totalEnrollments}
-                centerValue={totalEnrollments}
-                centerLabel="Enrollments"
-                showDirectLabels
-                segments={[
-                  { label: "Completed", count: completedCourses, color: "#0ca30c" },
-                  { label: "In Progress", count: inProgressEnrollments, color: "#2a78d6" },
-                ]}
-              />
-            </CardContent>
-          </Card>
+          <ChartCard>
+            <Donut
+              total={totalUsers}
+              centerValue={totalUsers}
+              centerLabel="Total Users"
+              showDirectLabels
+              segments={[
+                { label: "Students", count: students, color: "#2a78d6" },
+                { label: "Teachers", count: teachers, color: "#eb6834" },
+                { label: "SysAdmins", count: admins, color: "#1baf7a" },
+                { label: "Academy Admins", count: academyAdmins, color: "#8a63d2" },
+              ]}
+            />
+          </ChartCard>
+          <ChartCard>
+            <Donut
+              total={totalCourses}
+              centerValue={totalCourses}
+              centerLabel="Courses"
+              showDirectLabels
+              segments={[
+                { label: "Published", count: published, color: "#1baf7a" },
+                { label: "Pending Review", count: pendingReview, color: "#eda100" },
+                { label: "Other", count: otherCourses, color: "#898781" },
+              ]}
+            />
+          </ChartCard>
+          <ChartCard>
+            <Donut
+              total={totalEnrollments}
+              centerValue={totalEnrollments}
+              centerLabel="Enrollments"
+              showDirectLabels
+              segments={[
+                { label: "Completed", count: completedCourses, color: "#0ca30c" },
+                { label: "In Progress", count: inProgressEnrollments, color: "#2a78d6" },
+              ]}
+            />
+          </ChartCard>
         </div>
-      </main>
-      <Footer />
+      </Page>
     </>
   );
 }

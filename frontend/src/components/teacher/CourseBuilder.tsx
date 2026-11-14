@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Trash2, Upload, CheckCircle2, Loader2, Paperclip, X } from "lucide-react";
+import { Plus, Trash2, Upload, CheckCircle2, Loader2, Paperclip, X, LayoutGrid, Signal, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,6 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Progress } from "@/components/ui/progress";
 import { ImageCropDialog } from "@/components/shared/ImageCropDialog";
+import { FormField } from "@/components/shared";
+import { LEVELS, LANGUAGES, LevelOption, LanguageOption } from "@/components/course/course-options";
 import { courseApi } from "@/lib/api/courses";
 import { teacherApi } from "@/lib/api/teacher";
 import { ApiRequestError } from "@/lib/api/client";
@@ -20,9 +22,6 @@ import { uploadVideoResumable, type UploadProgress } from "@/lib/upload";
 import { mediaUrl, categoryIdOf } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import type { Course, LessonMaterial } from "@/lib/types";
-
-const LEVELS = ["Beginner", "Intermediate", "Advanced"];
-const LANGUAGES = ["English", "Spanish", "French", "Swahili"];
 
 interface BuilderLesson {
   key: string;
@@ -381,72 +380,74 @@ export function CourseBuilder({ course }: { course?: Course }) {
           <CardTitle>Course Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="title">Title</Label>
+          <FormField label="Title" htmlFor="title">
             <Input id="title" value={title} onChange={(e) => setTitle(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="description">Description</Label>
+          </FormField>
+          <FormField label="Description" htmlFor="description">
             <Textarea id="description" rows={5} value={description} onChange={(e) => setDescription(e.target.value)} />
-          </div>
+          </FormField>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-[2fr_1fr_1fr]">
-            <div className="space-y-1.5">
-              <Label>Category</Label>
+            <FormField label="Category">
               <Select
                 items={Object.fromEntries((categories || []).map((c) => [String(c.id), c.title]))}
                 value={category}
                 onValueChange={(v) => setCategory(v ?? "")}
               >
                 <SelectTrigger className="w-full">
+                  <LayoutGrid className="text-muted-foreground" />
                   <SelectValue placeholder="Select category" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories?.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.title}
-                    </SelectItem>
-                  ))}
+                  {categories?.length ? (
+                    categories.map((c) => (
+                      <SelectItem key={c.id} value={String(c.id)} label={c.title}>
+                        {c.title}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <p className="ui-option-empty">No categories available</p>
+                  )}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Level</Label>
+            </FormField>
+            <FormField label="Level">
               <Select
                 items={Object.fromEntries(LEVELS.map((l) => [l, l]))}
                 value={level}
                 onValueChange={(v) => setLevel(v ?? "Beginner")}
               >
                 <SelectTrigger className="w-full">
+                  <Signal className="text-muted-foreground" />
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="min-w-60">
                   {LEVELS.map((l) => (
-                    <SelectItem key={l} value={l}>
-                      {l}
+                    <SelectItem key={l} value={l} label={l}>
+                      <LevelOption level={l} />
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1.5">
-              <Label>Language</Label>
+            </FormField>
+            <FormField label="Language">
               <Select
                 items={Object.fromEntries(LANGUAGES.map((l) => [l, l]))}
                 value={language}
                 onValueChange={(v) => setLanguage(v ?? "English")}
               >
                 <SelectTrigger className="w-full">
+                  <Globe className="text-muted-foreground" />
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="min-w-44">
                   {LANGUAGES.map((l) => (
-                    <SelectItem key={l} value={l}>
-                      {l}
+                    <SelectItem key={l} value={l} label={l}>
+                      <LanguageOption language={l} />
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </FormField>
           </div>
           {isEditMode && (
             <p className="text-sm text-muted-foreground">
@@ -455,8 +456,7 @@ export function CourseBuilder({ course }: { course?: Course }) {
               (set by an administrator)
             </p>
           )}
-          <div className="space-y-1.5">
-            <Label>Course Image (required, 16:9)</Label>
+          <FormField label="Course Image (required, 16:9)">
             {(imagePreviewUrl || course?.image) && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -476,7 +476,7 @@ export function CourseBuilder({ course }: { course?: Course }) {
             <p className="text-xs text-muted-foreground">
               After choosing a file you can drag to reposition and zoom to crop it to the required 16:9 frame.
             </p>
-          </div>
+          </FormField>
         </CardContent>
       </Card>
 
@@ -590,7 +590,7 @@ export function CourseBuilder({ course }: { course?: Course }) {
                       )}
 
                       <div className="space-y-1.5 border-t pt-2">
-                        <Label className="text-xs text-muted-foreground">
+                        <Label className="text-xs font-medium text-muted-foreground">
                           Learning Materials (PDF, PPT, DOC, XLS — any size)
                         </Label>
                         {lesson.existingMaterials.map((material) => (
@@ -607,7 +607,7 @@ export function CourseBuilder({ course }: { course?: Course }) {
                             <Button
                               type="button"
                               variant="destructive"
-                              size="icon"
+                              size="icon-sm"
                               className="ml-auto shrink-0"
                               onClick={() =>
                                 removeExistingMaterial(
@@ -629,7 +629,7 @@ export function CourseBuilder({ course }: { course?: Course }) {
                             <Button
                               type="button"
                               variant="ghost"
-                              size="icon"
+                              size="icon-sm"
                               className="ml-auto shrink-0"
                               onClick={() => removePendingMaterial(moduleState.key, lesson.key, index)}
                             >

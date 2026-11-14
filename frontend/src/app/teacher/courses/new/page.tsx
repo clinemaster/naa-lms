@@ -1,19 +1,15 @@
 "use client";
 
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
-import { RequireRole } from "@/components/shared/RequireRole";
 import { CourseBuilder } from "@/components/teacher/CourseBuilder";
+import { Page, PageHeader, RequireRole } from "@/components/shared";
 
 function NewCourseContent() {
   return (
     <>
-      <Navbar />
-      <main className="mx-auto w-full max-w-4xl flex-1 px-4 py-10 sm:px-6 lg:px-8">
-        <h1 className="mb-6 text-3xl font-semibold">Create Course</h1>
+      <Page width="md">
+        <PageHeader title="Create Course" />
         <CourseBuilder />
-      </main>
-      <Footer />
+      </Page>
     </>
   );
 }

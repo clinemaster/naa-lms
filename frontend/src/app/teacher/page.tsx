@@ -4,15 +4,10 @@ import Link from "next/link";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
-import { RequireRole } from "@/components/shared/RequireRole";
-import { EmptyState } from "@/components/shared/EmptyState";
+import { ChartCard, DataTable, EmptyState, Page, PageHeader, PageSection, RequireRole, StatCard } from "@/components/shared";
 import { CourseStatusBadge } from "@/components/course/CourseStatusBadge";
 import { CourseStatusDonut } from "@/components/teacher/CourseStatusDonut";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { teacherApi } from "@/lib/api/teacher";
 import { formatDate } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
@@ -62,87 +57,71 @@ function TeacherDashboardContent() {
 
   return (
     <>
-      <Navbar />
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:px-6 lg:px-8">
-        <div className="mb-6 flex items-center justify-between">
-          <h1 className="text-3xl font-semibold">Teacher Dashboard</h1>
-          <Button render={<Link href="/teacher/courses/new">Create Course</Link>} />
-        </div>
+      <Page width="full">
+        <PageHeader
+          title="Teacher Dashboard"
+          actions={<Button render={<Link href="/teacher/courses/new">Create Course</Link>} />}
+        />
 
         <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-[2fr_1fr]">
-          <Card>
-            <CardContent className="pt-6">
-              <CourseStatusDonut
-                total={totalCourses}
-                segments={[
-                  { label: "Published", count: published, color: "#10b981" },
-                  { label: "Drafts", count: drafts, color: "#94a3b8" },
-                  { label: "Disabled", count: disabled, color: "#f59e0b" },
-                ]}
-              />
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="flex h-full flex-col justify-center pt-6">
-              <p className="text-2xl font-bold">{summary?.total_students ?? "—"}</p>
-              <p className="text-sm text-muted-foreground">Total Students</p>
-            </CardContent>
-          </Card>
+          <ChartCard>
+            <CourseStatusDonut
+              total={totalCourses}
+              segments={[
+                { label: "Published", count: published, color: "#10b981" },
+                { label: "Drafts", count: drafts, color: "#94a3b8" },
+                { label: "Disabled", count: disabled, color: "#f59e0b" },
+              ]}
+            />
+          </ChartCard>
+          <StatCard value={summary?.total_students ?? "—"} label="Total Students" />
         </div>
 
-        <h2 className="mb-4 text-xl font-semibold">My Courses</h2>
-        {isLoading ? (
-          <p className="text-muted-foreground">Loading…</p>
-        ) : !courses || courses.length === 0 ? (
-          <EmptyState
-            title="You have not created any courses."
-            actionLabel="Create Your First Course"
-            actionHref="/teacher/courses/new"
-          />
-        ) : (
-          <div className="overflow-x-auto rounded-lg border">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>S/No</TableHead>
-                  <TableHead>Course</TableHead>
-                  <TableHead>Students</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Updated</TableHead>
-                  <TableHead>Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {courses.map((c, index) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="text-muted-foreground">{index + 1}</TableCell>
-                    <TableCell className="font-medium">{c.title}</TableCell>
-                    <TableCell>{c.students.enrolled}</TableCell>
-                    <TableCell>
-                      <CourseStatusBadge status={c.teacher_course_status as PlatformStatus} />
-                    </TableCell>
-                    <TableCell>{formatDate(c.date)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" render={<Link href={`/teacher/courses/${c.id}/edit`}>Edit</Link>} />
-                        <Button
-                          variant="destructive"
-                          size="icon"
-                          disabled={deleteMutation.isPending}
-                          onClick={() => handleDelete(c.id, c.title)}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        )}
-      </main>
-      <Footer />
+        <PageSection title="My Courses">
+        <DataTable
+          numbered
+          data={courses}
+          isLoading={isLoading}
+          getRowKey={(c) => c.id}
+          emptyState={
+            <EmptyState
+              title="You have not created any courses."
+              actionLabel="Create Your First Course"
+              actionHref="/teacher/courses/new"
+            />
+          }
+          columns={[
+            { key: "title", header: "Course", primary: true, cell: (c) => c.title },
+            { key: "students", header: "Students", cell: (c) => c.students.enrolled },
+            {
+              key: "status",
+              header: "Status",
+              cell: (c) => <CourseStatusBadge status={c.teacher_course_status as PlatformStatus} />,
+            },
+            { key: "updated", header: "Updated", cell: (c) => formatDate(c.date) },
+            {
+              key: "actions",
+              header: "Actions",
+              actions: true,
+              cell: (c) => (
+                <>
+                  <Button variant="outline" size="sm" render={<Link href={`/teacher/courses/${c.id}/edit`}>Edit</Link>} />
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    aria-label={`Delete ${c.title}`}
+                    disabled={deleteMutation.isPending}
+                    onClick={() => handleDelete(c.id, c.title)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </>
+              ),
+            },
+          ]}
+        />
+        </PageSection>
+      </Page>
     </>
   );
 }

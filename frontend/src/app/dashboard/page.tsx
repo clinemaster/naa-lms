@@ -1,12 +1,8 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Navbar } from "@/components/layout/Navbar";
-import { Footer } from "@/components/layout/Footer";
-import { RequireRole } from "@/components/shared/RequireRole";
-import { EmptyState } from "@/components/shared/EmptyState";
+import { CardGrid, EmptyState, Page, PageHeader, PageSection, RequireRole, StatCard } from "@/components/shared";
 import { EnrolledCourseCard } from "@/components/course/EnrolledCourseCard";
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { enrollmentApi } from "@/lib/api/enrollment";
 import { useAuth } from "@/context/AuthContext";
@@ -31,61 +27,41 @@ function DashboardContent() {
 
   return (
     <>
-      <Navbar />
-      <main className="mx-auto w-full max-w-7xl flex-1 px-4 py-10 sm:px-6 lg:px-8">
-        <h1 className="mb-1 text-3xl font-semibold">Welcome, {user?.full_name}</h1>
-        <p className="mb-8 text-muted-foreground">Here&apos;s where you left off.</p>
+      <Page width="full">
+        <PageHeader title={`Welcome, ${user?.full_name ?? ""}`} description="Here's where you left off." className="mb-8" />
 
         {summary && (
           <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-3xl font-bold">{summary.total_courses}</p>
-                <p className="text-sm text-muted-foreground">Enrolled courses</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-3xl font-bold">{summary.completed_lessons}</p>
-                <p className="text-sm text-muted-foreground">Lessons completed</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <p className="text-3xl font-bold">{summary.achieved_certificates}</p>
-                <p className="text-sm text-muted-foreground">Certificates earned</p>
-              </CardContent>
-            </Card>
+            <StatCard value={summary.total_courses} label="Enrolled courses" />
+            <StatCard value={summary.completed_lessons} label="Lessons completed" />
+            <StatCard value={summary.achieved_certificates} label="Certificates earned" />
           </div>
         )}
 
-        <section className="mb-10">
-          <h2 className="mb-4 text-xl font-semibold">Continue Learning</h2>
+        <PageSection title="Continue Learning">
           {isLoading ? (
             <Skeleton className="h-80 w-full max-w-sm rounded-xl" />
           ) : inProgress.length === 0 ? (
             <EmptyState title="No courses in progress." actionLabel="Explore Courses" actionHref="/courses" />
           ) : (
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <CardGrid>
               {inProgress.map((enrollment) => (
                 <EnrolledCourseCard key={enrollment.id} enrollment={enrollment} />
               ))}
-            </div>
+            </CardGrid>
           )}
-        </section>
+        </PageSection>
 
         {completed.length > 0 && (
-          <section>
-            <h2 className="mb-4 text-xl font-semibold">Completed Courses</h2>
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <PageSection title="Completed Courses">
+            <CardGrid>
               {completed.map((enrollment) => (
                 <EnrolledCourseCard key={enrollment.id} enrollment={enrollment} />
               ))}
-            </div>
-          </section>
+            </CardGrid>
+          </PageSection>
         )}
-      </main>
-      <Footer />
+      </Page>
     </>
   );
 }
